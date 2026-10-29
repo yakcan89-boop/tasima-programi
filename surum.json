@@ -1,0 +1,10 @@
+{
+  "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
+  "programlar": {
+    "tasima_genel_v1": {
+      "surum": "29.10.2026",
+      "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
+      "notlar": "MEBBİS'ten öğrenci listesi ve güzergah aktarma, sıfırlamadan önce otomatik yedek."
+    }
+  }
+}
