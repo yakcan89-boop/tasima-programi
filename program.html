@@ -2060,7 +2060,18 @@
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target.result);
+        let data = JSON.parse(e.target.result);
+        // Masaüstü programının "Tüm verilerin yedeği" ya da günlük/sıfırlama yedeği: içinde birden çok program olabilir
+        if (data && !Array.isArray(data.routes)) {
+          const adaylar = [];
+          Object.keys(data).forEach(k => { try { const o = typeof data[k] === 'string' ? JSON.parse(data[k]) : data[k]; if (o && Array.isArray(o.routes)) adaylar.push({ k, o }); } catch (x) {} });
+          const dolu = x => (x.o.routes || []).length + Object.values(x.o.students || {}).reduce((t, l) => t + (l || []).length, 0);
+          let sec = adaylar.find(x => x.k === 'tasima_genel_v1' && dolu(x) > 0) || adaylar.filter(x => dolu(x) > 0).sort((a, b) => dolu(b) - dolu(a))[0];
+          if (!sec) throw new Error('Yedekte program verisi bulunamadı');
+          if (sec.k !== 'tasima_genel_v1' && !confirm('Bu yedek başka bir program sürümüne ait (' + (sec.o.okulAdi || sec.k) + ').\nGüzergah: ' + sec.o.routes.length + ' · Öğrenci: ' + dolu(sec) + '\n\nYine de bu programa yüklensin mi?')) { document.getElementById('backup-file-input').value = ''; return; }
+          data = sec.o;
+        }
+        if (!data || !Array.isArray(data.routes)) throw new Error('Geçersiz yedek');
         localStorage.setItem('tasima_genel_v1', JSON.stringify(data));
         alert("Yedek başarıyla yüklendi. Sayfa yenileniyor...");
         location.reload();
