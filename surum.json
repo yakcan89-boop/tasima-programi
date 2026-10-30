@@ -6,5 +6,31 @@
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
       "notlar": "Ana sayfa düzeni: MEB takvimi ve aylık veriler okul bilgilerinin altına alındı. Günlük takip Excel/Word ve tam sayfa yazdırma, puantaj Word çıktısı."
     }
+  },
+  "kabuk": {
+    "surum": "1.1.6",
+    "notlar": "MEBBİS'e e-Devlet ve karekod ile giriş düzeltildi. Masaüstü programı artık kendini de internetten güncelliyor.",
+    "dosyalar": {
+      "main.js": {
+        "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
+        "sha256": "e5481d6b83f60960aa9dd22f4d76b44b756ec84f7f264fd26a002c935224df6e"
+      },
+      "preload.js": {
+        "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
+        "sha256": "f2df0aa941151145edbf72e22b20df208eb4f8271c071c0d4dbd382f13d7eb66"
+      },
+      "preload_mebbis.js": {
+        "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload_mebbis.js",
+        "sha256": "ac2aaac6e87780b97c9939c78e841522dd9de6204fbf1d90c27396529fe18fd0"
+      },
+      "onizle.html": {
+        "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/onizle.html",
+        "sha256": "4df0f80b3998fbafdfb49cf6ca4a6cd93d6519db6f3cf23da5206b7bbcd1e4f9"
+      },
+      "onizle_preload.js": {
+        "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/onizle_preload.js",
+        "sha256": "3b5a0e11c34dec1428ea5d736b5e6d3f76e8f22766020f85a14b7152ab9d3d11"
+      }
+    }
   }
 }
