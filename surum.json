@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "30.10.2026",
+      "surum": "31.10.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Günlük takip çizelgesi: yatay A4'ü tam kaplayan yazdırma, Excel ve Word çıktısı (tek ve toplu). Puantaj Word çıktısı yazdırılan sayfanın aynısı."
+      "notlar": "Ana sayfa düzeni: MEB takvimi ve aylık veriler okul bilgilerinin altına alındı. Günlük takip Excel/Word ve tam sayfa yazdırma, puantaj Word çıktısı."
     }
   }
 }

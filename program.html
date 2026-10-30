@@ -267,7 +267,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 30.10.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 31.10.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -363,6 +363,16 @@
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;">MDR. YRD.</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="mdr-yard" value="" placeholder="Ad SOYAD" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
             </table>
           </div>
+          <div class="info-panel-grid" style="grid-template-columns:1fr; gap:10px; margin-top:12px;">
+            <div class="info-box" style="border-left: 4px solid #e66c1b;">
+              <h4 style="color:#c2410c;">📅 <span id="info-month-name">EYLÜL</span> AYI RESMÎ MEB TAKVİMİ & ÖNEMLİ GÜNLERİ</h4>
+              <ul id="info-month-events"></ul>
+            </div>
+            <div class="info-box" style="border-left: 4px solid #009944;">
+              <h4 style="color:#15803d;">📊 AYLIK TAŞIMA, NÖBET VE İŞ GÜNÜ VERİLERİ</h4>
+              <ul id="info-month-stats"></ul>
+            </div>
+          </div>
         </div>
 
         <div style="flex:1;">
@@ -382,16 +392,6 @@
         </div>
       </div>
 
-      <div class="info-panel-grid">
-        <div class="info-box" style="border-left: 4px solid #e66c1b;">
-          <h4 style="color:#c2410c;">📅 <span id="info-month-name">EYLÜL</span> AYI RESMÎ MEB TAKVİMİ & ÖNEMLİ GÜNLERİ</h4>
-          <ul id="info-month-events"></ul>
-        </div>
-        <div class="info-box" style="border-left: 4px solid #009944;">
-          <h4 style="color:#15803d;">📊 AYLIK TAŞIMA, NÖBET VE İŞ GÜNÜ VERİLERİ</h4>
-          <ul id="info-month-stats"></ul>
-        </div>
-      </div>
     </div>
 
     <!-- OKUL NÖBETİ -->
