@@ -8,12 +8,12 @@
     }
   },
   "kabuk": {
-    "surum": "1.1.6",
-    "notlar": "MEBBİS'e e-Devlet ve karekod ile giriş düzeltildi. Masaüstü programı artık kendini de internetten güncelliyor.",
+    "surum": "1.1.7",
+    "notlar": "Taşıma Programı rehber paneli artık Taşımalı Öğrenci Modülü penceresinde açılıyor; küçültülünce köşede düğme olarak kalıyor.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "e5481d6b83f60960aa9dd22f4d76b44b756ec84f7f264fd26a002c935224df6e"
+        "sha256": "5cbc1c04e49c5a6e9dec4699ab8101edf8fe9349c5e51e1b8e8474d012ad8191"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
@@ -21,7 +21,7 @@
       },
       "preload_mebbis.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload_mebbis.js",
-        "sha256": "ac2aaac6e87780b97c9939c78e841522dd9de6204fbf1d90c27396529fe18fd0"
+        "sha256": "8dd4cbb04d735c5151b30c90af7f76c6298138e79453c32441ad8eb829c7b425"
       },
       "onizle.html": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/onizle.html",
