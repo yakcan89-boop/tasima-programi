@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Yazdırma Önizleme</title>
+<style>
+  :root { --kenar: #d0d5dd; --ana: #1a73e8; --zemin: #f1f3f4; --yazi: #202124; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; color: var(--yazi); background: #525659; }
+  body { display: flex; height: 100vh; }
+  #onizleme { flex: 1; position: relative; min-width: 0; }
+  #sayfalar { position: absolute; inset: 0; overflow: auto; padding: 24px 0; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  #sayfalar canvas { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.45); display: block; }
+  #bekle { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(82,86,89,.55); color: #fff; font-size: 15px; }
+  #bekle.gorunur { display: flex; }
+  aside { width: 300px; background: #fff; border-left: 1px solid var(--kenar); display: flex; flex-direction: column; }
+  aside header { padding: 18px 20px 6px; }
+  aside h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  #sayfaSay { color: #5f6368; margin-top: 4px; }
+  .ayarlar { flex: 1; overflow: auto; padding: 8px 20px; }
+  .satir { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; }
+  .satir label { flex: 0 0 104px; }
+  select, input[type=number] { flex: 1; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--kenar); border-radius: 4px; font: inherit; background: #fff; }
+  select:focus, input:focus { outline: 2px solid var(--ana); outline-offset: -1px; }
+  .olcek { display: flex; flex: 1; gap: 6px; align-items: center; }
+  .olcek input { width: 70px; flex: 0 0 70px; }
+  .not { color: #5f6368; font-size: 12px; line-height: 1.4; padding: 6px 0 2px; }
+  footer { display: flex; gap: 8px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--kenar); flex-wrap: wrap; }
+  button { height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid var(--kenar); background: #fff; color: var(--ana); font: inherit; font-weight: 600; cursor: pointer; }
+  button.ana { background: var(--ana); border-color: var(--ana); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  #hata { color: #c5221f; font-size: 12px; padding: 4px 20px; display: none; }
+</style>
+</head>
+<body>
+<div id="onizleme">
+  <div id="sayfalar"></div>
+  <div id="bekle">Önizleme hazırlanıyor…</div>
+</div>
+<aside>
+  <header>
+    <h1>Yazdır</h1>
+    <div id="sayfaSay">&nbsp;</div>
+  </header>
+  <div class="ayarlar">
+    <div class="satir"><label for="yon">Düzen</label>
+      <select id="yon"><option value="dikey">Dikey</option><option value="yatay">Yatay</option></select></div>
+    <div class="satir"><label for="kagit">Kâğıt boyutu</label>
+      <select id="kagit"><option value="A4">A4</option><option value="A3">A3</option><option value="A5">A5</option></select></div>
+    <div class="satir"><label for="olcekTur">Ölçek</label>
+      <select id="olcekTur"><option value="varsayilan">Varsayılan</option><option value="sigdir">Sayfa genişliğine sığdır</option><option value="ozel">Özel</option></select></div>
+    <div class="satir" id="ozelSatir" style="display:none"><label for="olcek">Ölçek (%)</label>
+      <div class="olcek"><input id="olcek" type="number" min="10" max="200" step="5" value="100"><span>%</span></div></div>
+    <div class="satir"><label for="kenar">Kenar boşlukları</label>
+      <select id="kenar"><option value="varsayilan">Varsayılan</option><option value="normal">Normal</option><option value="dar">Dar</option><option value="yok">Yok</option></select></div>
+    <div class="satir"><label for="arka">Arka plan renkleri</label>
+      <select id="arka"><option value="1">Açık</option><option value="0">Kapalı</option></select></div>
+    <div class="not">Ayarı değiştirdiğinizde önizleme kendiliğinden yenilenir. Yazdır'a basınca yazıcı seçme penceresi açılır.</div>
+  </div>
+  <div id="hata"></div>
+  <footer>
+    <button id="kaydetBtn">PDF kaydet</button>
+    <button id="kapatBtn">İptal</button>
+    <button id="yazdirBtn" class="ana">Yazdır</button>
+  </footer>
+</aside>
+<script type="module">
+  import * as pdfjs from './pdfjs/pdf.min.mjs';
+  pdfjs.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.min.mjs';
+  const $ = id => document.getElementById(id);
+  const api = window.onizleApi;
+  function ayar() {
+    const t = $('olcekTur').value;
+    let o = parseInt($('olcek').value, 10); if (!(o >= 10 && o <= 200)) o = 100;
+    return { yatay: $('yon').value === 'yatay', kagit: $('kagit').value, olcekTur: t, olcek: o, kenar: $('kenar').value, arka: $('arka').value === '1' };
+  }
+  function mesgul(v) {
+    $('bekle').classList.toggle('gorunur', v);
+    ['kaydetBtn', 'yazdirBtn'].forEach(b => $(b).disabled = v);
+  }
+  function hata(m) { $('hata').textContent = m || ''; $('hata').style.display = m ? 'block' : 'none'; }
+  let sira = 0, zaman = null;
+  async function yenile() {
+    const benim = ++sira; mesgul(true); hata('');
+    try {
+      const s = await api.olustur(ayar());
+      if (benim !== sira) return;
+      if (s.hata) { hata(s.hata); return; }
+      await ciz(s.veri, benim);
+      if (benim !== sira) return;
+      $('sayfaSay').textContent = s.sayfa + ' sayfa' + (s.olcek ? ' · ölçek %' + s.olcek : '');
+      if (ayar().olcekTur === 'sigdir' && s.olcek) $('olcek').value = s.olcek;
+    } catch (e) { hata('Önizleme hazırlanamadı: ' + e.message); }
+    finally { if (benim === sira) mesgul(false); }
+  }
+  // PDF sayfalarını pencere genişliğine göre çiz
+  async function ciz(veri, benim) {
+    const gorev = pdfjs.getDocument({ data: veri }); const belge = await gorev.promise;
+    const kap = $('sayfalar'), yeni = document.createDocumentFragment();
+    const gen = Math.max(300, kap.clientWidth - 48), dpr = window.devicePixelRatio || 1;
+    for (let i = 1; i <= belge.numPages; i++) {
+      if (benim !== sira) { gorev.destroy(); return; }
+      const sayfa = await belge.getPage(i);
+      const v1 = sayfa.getViewport({ scale: 1 });
+      const olc = Math.min(gen / v1.width, 1.6);
+      const v = sayfa.getViewport({ scale: olc * dpr });
+      const c = document.createElement('canvas');
+      c.width = Math.floor(v.width); c.height = Math.floor(v.height);
+      c.style.width = Math.floor(v.width / dpr) + 'px'; c.style.height = Math.floor(v.height / dpr) + 'px';
+      await sayfa.render({ canvasContext: c.getContext('2d'), viewport: v }).promise;
+      yeni.appendChild(c);
+    }
+    const ust = kap.scrollTop; kap.replaceChildren(yeni); kap.scrollTop = ust;
+    gorev.destroy();
+  }
+  let sonGen = 0;
+  window.addEventListener('resize', () => { const g = $('sayfalar').clientWidth; if (Math.abs(g - sonGen) > 40) { sonGen = g; gecikmeli(); } });
+  function gecikmeli() { clearTimeout(zaman); zaman = setTimeout(yenile, 350); }
+  ['yon', 'kagit', 'kenar', 'arka'].forEach(id => $(id).addEventListener('change', yenile));
+  $('olcekTur').addEventListener('change', () => { $('ozelSatir').style.display = $('olcekTur').value === 'ozel' ? '' : 'none'; yenile(); });
+  $('olcek').addEventListener('input', gecikmeli);
+  $('yazdirBtn').addEventListener('click', async () => { hata(''); const s = await api.yazdir(ayar()); if (s && s.hata) hata(s.hata); });
+  $('kaydetBtn').addEventListener('click', async () => { hata(''); const s = await api.kaydet(ayar()); if (s && s.hata) hata(s.hata); });
+  $('kapatBtn').addEventListener('click', () => api.kapat());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') api.kapat(); if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); $('yazdirBtn').click(); } });
+  async function basla() {
+    const b = await api.bilgi();
+    $('yon').value = b && b.yatay ? 'yatay' : 'dikey';
+    $('kagit').value = (b && b.kagit) || 'A4';
+    $('kenar').value = b && b.kenarVar ? 'varsayilan' : 'normal';
+    yenile();
+  }
+  api.yeniSayfa(basla);
+  basla();
+</script>
+</body>
+</html>
