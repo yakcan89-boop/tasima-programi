@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.6';
+const KABUK_SURUM = '1.1.7';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
