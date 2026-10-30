@@ -267,7 +267,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 29.10.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 30.10.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -1741,6 +1741,100 @@
      Tarayıcı hafızası boşsa (yeni bilgisayar, veri sıfırlama)
      program bu verilerle açılır.
      ============================================================ */
+  /* ============================================================
+     ÇOKLU OKUL — aynı programda ilkokul / ortaokul / lise
+     Her okulun verisi ayrı anahtarda: tasima_genel_v1, tasima_genel_v1__o123…
+     Masaüstü programı anahtarı şu satırdan tanır: localStorage.getItem('tasima_genel_v1')
+     ============================================================ */
+  const VERI_TABANI = 'tasima_genel_v1';
+  const OKUL_LISTE_ANAHTARI = VERI_TABANI + '_okullar', AKTIF_OKUL_ANAHTARI = VERI_TABANI + '_aktif_okul';
+  const AKTIF_OKUL = (() => { try { return localStorage.getItem(AKTIF_OKUL_ANAHTARI) || ''; } catch (e) { return ''; } })();
+  const VERI_ANAHTARI = VERI_TABANI + (AKTIF_OKUL ? '__' + AKTIF_OKUL : '');
+  function okulListesi() {
+    let L = []; try { L = JSON.parse(localStorage.getItem(OKUL_LISTE_ANAHTARI) || '[]'); } catch (e) {}
+    if (!Array.isArray(L)) L = [];
+    if (!L.some(o => o.id === '')) L.unshift({ id: '', ad: '' });
+    const adBul = o => { try { const d = JSON.parse(localStorage.getItem(VERI_TABANI + (o.id ? '__' + o.id : '')) || 'null'); return (d && String(d.okulAdi || '').trim()) || o.ad || ''; } catch (e) { return o.ad || ''; } };
+    return L.map(o => ({ id: o.id, ad: adBul(o) }));
+  }
+  function okulListesiYaz(L) { try { localStorage.setItem(OKUL_LISTE_ANAHTARI, JSON.stringify(L.map(o => ({ id: o.id, ad: o.ad })))); } catch (e) {} }
+  function okulDegistir(id) {
+    if (id === AKTIF_OKUL) return;
+    try { saveDataToStorage(); } catch (e) {}
+    try { if (id) localStorage.setItem(AKTIF_OKUL_ANAHTARI, id); else localStorage.removeItem(AKTIF_OKUL_ANAHTARI); } catch (e) {}
+    if (window.__masaustuKaydet) { try { window.__masaustuKaydet(); } catch (e) {} }
+    location.reload();
+  }
+  function okulEkle() {
+    // masaüstü programında prompt() çalışmadığı için küçük bir pencere
+    okulSeciciCiz();
+    let m = document.getElementById('okul-ekle-modal'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'okul-ekle-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center';
+    m.innerHTML = `<div style="background:#fff;border-radius:12px;padding:18px;width:420px;max-width:92vw;font:14px 'Segoe UI',sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <div style="font-weight:700;font-size:16px;margin-bottom:6px">🏫 Yeni okul ekle</div>
+      <div style="color:#475569;font-size:12.5px;margin-bottom:10px">Her okulun öğrencileri, güzergahları, puantajı ve nöbeti ayrı tutulur. Okullar arasında soldaki "Okul" kutusundan geçilir.</div>
+      <input id="okul-ekle-ad" placeholder="Örnek: YEŞİLYÖRE ORTAOKULU" style="width:100%;box-sizing:border-box;padding:8px;font-size:14px;border:1px solid #94a3b8;border-radius:6px">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button type="button" id="okul-ekle-iptal" style="padding:8px 14px;border:0;border-radius:6px;background:#e2e8f0;font-weight:700;cursor:pointer">Vazgeç</button>
+        <button type="button" id="okul-ekle-tamam" style="padding:8px 14px;border:0;border-radius:6px;background:#0e7490;color:#fff;font-weight:700;cursor:pointer">Ekle ve aç</button>
+      </div></div>`;
+    document.body.appendChild(m);
+    const inp = m.querySelector('#okul-ekle-ad'); inp.focus();
+    const kapat = () => m.remove();
+    const tamam = () => {
+      const ad = String(inp.value || '').replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR');
+      if (!ad) { inp.style.borderColor = '#dc2626'; inp.focus(); return; }
+      const L = okulListesi();
+      if (L.some(o => o.ad === ad)) { alert('Bu adda bir okul zaten var.'); return; }
+      const id = 'o' + Date.now().toString(36);
+      L.push({ id, ad }); okulListesiYaz(L);
+      kapat(); okulDegistir(id);
+    };
+    m.querySelector('#okul-ekle-iptal').onclick = kapat;
+    m.querySelector('#okul-ekle-tamam').onclick = tamam;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') tamam(); if (e.key === 'Escape') kapat(); });
+  }
+  function okulSil() {
+    const L = okulListesi(); const o = L.find(x => x.id === AKTIF_OKUL);
+    if (!AKTIF_OKUL || !o) { alert('İlk okul silinemez; bilgilerini "Verileri Sıfırla" ile boşaltabilirsiniz.'); return; }
+    if (!confirm(`"${o.ad || 'Bu okul'}" programdan kaldırılsın mı?\n\nBütün bilgileri silinir. Silmeden önce yedek alınır (Yedekler klasörü).`)) return;
+    if (window.masaustu && window.masaustu.oncedenYedek) { try { window.masaustu.oncedenYedek('sifirlama_oncesi'); } catch (e) {} }
+    else { try { exportBackup(); } catch (e) {} }
+    try { localStorage.removeItem(VERI_ANAHTARI); } catch (e) {}
+    okulListesiYaz(L.filter(x => x.id !== AKTIF_OKUL));
+    okulDegistir('');
+  }
+  function okulSeciciCiz() {
+    const L = okulListesi();
+    // listede olmayan aktif okul (elle silinmiş vs.) varsa ilk okula dön
+    if (AKTIF_OKUL && !L.some(o => o.id === AKTIF_OKUL)) { okulDegistir(''); return; }
+    let k = document.getElementById('okul-secici');
+    if (!k) {
+      // üstteki tarih şeridinde, "BUGÜNE GÜNCELLE" düğmesinin solunda
+      const btn = document.getElementById('clock-today-btn'); if (!btn) return;
+      k = document.createElement('div'); k.id = 'okul-secici';
+      k.style.cssText = 'display:flex; align-items:center; gap:6px; margin-left:auto; margin-right:12px; color:#fff; font:13px "Segoe UI",sans-serif;';
+      btn.parentNode.insertBefore(k, btn);
+    }
+    const esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    k.innerHTML = `<span style="font-size:18px;">🏫</span>
+      <select id="okul-secici-liste" title="Okul değiştir / yeni okul ekle" style="max-width:440px; padding:6px 8px; border-radius:8px; border:2px solid #fde047; font-weight:bold; font-size:13px; background:#fff; color:#0f172a; cursor:pointer;" onchange="this.value === '__yeni__' ? okulEkle() : okulDegistir(this.value)">
+        ${L.map(o => `<option value="${esc(o.id)}" ${o.id === AKTIF_OKUL ? 'selected' : ''}>${esc(o.ad || '(okul adı yazılmamış)')}</option>`).join('')}
+        <option value="__yeni__">➕ Yeni okul ekle…</option>
+      </select>
+      ${L.length > 1 && AKTIF_OKUL ? '<a href="javascript:void(0)" onclick="okulSil()" title="Bu okulu programdan kaldır" style="color:#fecaca; font-size:11px; white-space:nowrap;">kaldır</a>' : ''}`;
+    // yeni eklenen okulun adı Merkez okul adına yazılsın
+    const el = document.getElementById('okul-adi'); const ben = L.find(o => o.id === AKTIF_OKUL);
+    if (el && !String(el.value || '').trim()) {
+      let bek = ''; try { bek = (JSON.parse(localStorage.getItem(OKUL_LISTE_ANAHTARI) || '[]').find(o => o.id === AKTIF_OKUL) || {}).ad || ''; } catch (e) {}
+      if (bek) { el.value = bek; try { saveDataToStorage(); } catch (e) {} }
+    }
+  }
+  window.addEventListener('load', () => setTimeout(okulSeciciCiz, 0));
+  // okul adı değişince seçicideki ad da güncellensin
+  document.addEventListener('change', e => { if (e.target && e.target.id === 'okul-adi') setTimeout(okulSeciciCiz, 50); });
+
   const GOMULU_YEDEK = {
     "routes": [],
     "students": {},
@@ -2044,7 +2138,7 @@
     const now = new Date();
     const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
     a.href = url;
-    a.download = `tasima_yedek_${stamp}.json`;
+    a.download = (() => { const d = new Date(), p = n => String(n).padStart(2, '0'); const okul = String((document.getElementById('okul-adi') || {}).value || '').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Okul'; const asc = t => t.replace(/[ğĞüÜşŞıİöÖçÇ]/g, c => ({ ğ: 'g', Ğ: 'G', ü: 'u', Ü: 'U', ş: 's', Ş: 'S', ı: 'i', İ: 'I', ö: 'o', Ö: 'O', ç: 'c', Ç: 'C' }[c])).replace(/[^\x20-\x7E]/g, ''); return asc(`${okul} - Yedek - ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}.${p(d.getMinutes())}.json`); })();
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2066,13 +2160,13 @@
           const adaylar = [];
           Object.keys(data).forEach(k => { try { const o = typeof data[k] === 'string' ? JSON.parse(data[k]) : data[k]; if (o && Array.isArray(o.routes)) adaylar.push({ k, o }); } catch (x) {} });
           const dolu = x => (x.o.routes || []).length + Object.values(x.o.students || {}).reduce((t, l) => t + (l || []).length, 0);
-          let sec = adaylar.find(x => x.k === 'tasima_genel_v1' && dolu(x) > 0) || adaylar.filter(x => dolu(x) > 0).sort((a, b) => dolu(b) - dolu(a))[0];
+          let sec = adaylar.find(x => x.k === VERI_ANAHTARI && dolu(x) > 0) || adaylar.filter(x => dolu(x) > 0).sort((a, b) => dolu(b) - dolu(a))[0];
           if (!sec) throw new Error('Yedekte program verisi bulunamadı');
-          if (sec.k !== 'tasima_genel_v1' && !confirm('Bu yedek başka bir program sürümüne ait (' + (sec.o.okulAdi || sec.k) + ').\nGüzergah: ' + sec.o.routes.length + ' · Öğrenci: ' + dolu(sec) + '\n\nYine de bu programa yüklensin mi?')) { document.getElementById('backup-file-input').value = ''; return; }
+          if (sec.k !== VERI_ANAHTARI && !confirm('Bu yedek başka bir program sürümüne ait (' + (sec.o.okulAdi || sec.k) + ').\nGüzergah: ' + sec.o.routes.length + ' · Öğrenci: ' + dolu(sec) + '\n\nYine de bu programa yüklensin mi?')) { document.getElementById('backup-file-input').value = ''; return; }
           data = sec.o;
         }
         if (!data || !Array.isArray(data.routes)) throw new Error('Geçersiz yedek');
-        localStorage.setItem('tasima_genel_v1', JSON.stringify(data));
+        localStorage.setItem(VERI_ANAHTARI, JSON.stringify(data));
         alert("Yedek başarıyla yüklendi. Sayfa yenileniyor...");
         location.reload();
       } catch (err) {
@@ -2104,7 +2198,7 @@
       ilkokulSabitAktif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
       ozelEgitimRouteNo, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
-    localStorage.setItem('tasima_genel_v1', JSON.stringify(appData));
+    localStorage.setItem(VERI_ANAHTARI, JSON.stringify(appData));
   }
 
   // Eskiden kaydedilmiş verilerde okul no / şube / cinsiyet / T.C. alanları yoktu.
@@ -2321,7 +2415,7 @@
   }
 
   function loadDataFromStorage() {
-    const saved = localStorage.getItem('tasima_genel_v1');
+    const saved = localStorage.getItem(VERI_ANAHTARI); /* localStorage.getItem('tasima_genel_v1') */
     if (saved) {
       try {
         const data = JSON.parse(saved);
@@ -2553,7 +2647,10 @@
     if (window.masaustu && window.masaustu.oncedenYedek) { try { yedekYolu = window.masaustu.oncedenYedek('sifirlama_oncesi'); } catch (e) {} }
     else { try { exportBackup(); } catch (e) {} }
     if (yedekYolu) alert('Silinmeden önceki veriler yedeklendi:\n' + yedekYolu + '\n\nGeri almak için: Dosya → Yedekten geri yükle');
-    localStorage.removeItem('tasima_genel_v1');
+    // Veri Kaynağı klasörüne bilerek konmuş dosya varsa program onun bilgileriyle açılabilir
+    let vk = null; try { vk = window.masaustu && window.masaustu.veriKaynagi ? window.masaustu.veriKaynagi() : null; } catch (e) {}
+    if (vk && vk.veri && confirm('Veri Kaynağı klasöründe "' + vk.ad + '" dosyası var.\n\nProgram bu dosyadaki okul bilgileriyle açılsın mı?\n(İptal derseniz programın kendi ilk bilgileriyle açılır.)')) localStorage.setItem(VERI_ANAHTARI, JSON.stringify(vk.veri));
+    else localStorage.removeItem(VERI_ANAHTARI);
     location.reload();
   }
 
@@ -3126,7 +3223,7 @@
   function topluKayit(r) {
     const nrm = sinifNormalle(r.seviye, r.sube);
     return { tc: String(r.tc || '').replace(/\D/g, ''), name: formatNameCase(r.name || ''), grade: nrm.grade || '', sube: nrm.sube || String(r.sube || '').toLocaleUpperCase('tr-TR'),
-             okulNo: String(r.okulNo || '').trim(), cinsiyet: r.cinsiyet || '' };
+             okulNo: String(r.okulNo || '').trim(), cinsiyet: r.cinsiyet || '', ...(typeof r.ozelEgitim === 'boolean' ? { ozelEgitim: r.ozelEgitim } : {}) };
   }
   function topluFark(m, k) {
     const f = [];
@@ -3136,6 +3233,7 @@
     if (k.sube && !ayni(m.sube, k.sube)) f.push(['şube', m.sube, k.sube, 'sube']);
     if (k.okulNo && !ayni(m.okulNo, k.okulNo)) f.push(['öğrenci no', m.okulNo, k.okulNo, 'okulNo']);
     if (k.cinsiyet && !ayni(m.cinsiyet, k.cinsiyet)) f.push(['cinsiyet', cinsiyetEtiket(m.cinsiyet), cinsiyetEtiket(k.cinsiyet), 'cinsiyet']);
+    if (typeof k.ozelEgitim === 'boolean' && !!m.ozelEgitim !== k.ozelEgitim) f.push(['özel eğitim', m.ozelEgitim ? 'Evet' : 'Hayır', k.ozelEgitim ? 'Evet' : 'Hayır', 'ozelEgitim']);
     if (k.tc && !ayni(m.tc, k.tc)) f.push(['T.C.', m.tc, k.tc, 'tc']);
     return f;
   }
@@ -3278,7 +3376,16 @@
      yalnızca fark olarak gösterilir.
      ============================================================ */
   let mebbisServisSon = null;
+  /* MEBBİS sayfasının üstündeki okul adı: program boşken Merkez okul adına yazılır (doluysa dokunulmaz) */
+  function mebbisOkulAdi(ad) {
+    ad = String(ad || '').replace(/\s+/g, ' ').trim(); const el = document.getElementById('okul-adi');
+    if (!ad || !el || String(el.value || '').trim()) return false;
+    el.value = ad.toLocaleUpperCase('tr-TR');
+    try { saveDataToStorage(); } catch (e) {}
+    return true;
+  }
   function mebbisServisAktar(v) {
+    const okulYazildi = mebbisOkulAdi(v && v.okul);
     const B = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ' ').trim();
     const P = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, '');
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -3287,19 +3394,37 @@
     const rBul = g => routes.find(r => String(r.no || '').trim() === String(g.guzNo || '').trim())
                    || routes.find(r => P(r.plate) && P(r.plate) === P(g.plaka));
     const arac = [], yok = [], degis = [], yesilTc = new Set(), gri = new Map(), eslenenRid = new Set();
+    // ⓘ "Taşınan Bölgeler": "… - 84.NOLU GÜZERGAH : YEŞİLYÖRE-ÇÖMEZLER" → "YEŞİLYÖRE-ÇÖMEZLER"
+    const bolgeAdi = g => {
+      const b = g && g.bolge; if (!b) return '';
+      let hucreler = (b.satirlar || []).map(s => s[1] || '').filter(x => x && !/^Taşınan Bölgeler$/i.test(x));
+      if (!hucreler.length && b.metin) { const m = b.metin.match(/Taşınan Bölgeler([\s\S]*?)Yüklenici/i); if (m) hucreler = [m[1]]; }
+      const adlar = [];
+      hucreler.forEach(h => String(h).split(/\s(?=\d+\s*-\s)/).forEach(p => {
+        p = p.replace(/^\s*\d+\s*-\s*/, '').trim(); if (!p) return;
+        let ad = p.includes(':') ? p.slice(p.lastIndexOf(':') + 1) : p.split(/\s+-\s+/).pop();
+        ad = ad.replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR');
+        if (ad && !adlar.includes(ad)) adlar.push(ad);
+      }));
+      return adlar.join(' / ');
+    };
     const vakitBul = g => { const sa = parseInt(String(g.alma || '').split(':')[0], 10); return isNaN(sa) ? '' : (sa >= 11 ? 'Öğlen-Akşam' : 'Sabah-Öğlen'); };
     const plakaYaz = p => { const m = P(p).match(/^(\d{2})([A-ZÇĞİÖŞÜ]{1,3})(\d{2,5})$/); return m ? `${m[1]} ${m[2]} ${m[3]}` : String(p || ''); };
     okunan.forEach(g => {
       let r = rBul(g);
       if (!r) {      // programda yok → MEBBİS bilgileriyle oluşturulsun
         // MEBBİS'ten yalnızca güzergah no, plaka, şoför adı ve vakit (öğrenci alma saatinden) alınır
-        r = { id: null, no: String(g.guzNo || ''), name: '', driver: formatNameCase(g.sofor || ''), rehberPersonel: '', vakit: vakitBul(g),
-              plate: plakaYaz(g.plaka), tcNo: '', phone: '', modelYear: '', license: '', cap: '', ekSeferler: [] };
+        r = { id: null, no: String(g.guzNo || ''), name: bolgeAdi(g), driver: formatNameCase(g.sofor || ''), rehberPersonel: '', vakit: vakitBul(g),
+              plate: plakaYaz(g.plaka), tcNo: '', phone: '', modelYear: '', license: '', ekSeferler: [],
+              cap: String(Math.min(16, Math.max(14, (g.ogrenciler || []).filter(o => o.durum === 'yesil').length))) };   // kapasite: ilk öğrenci sayısı, en az 14 en fazla 16
         degis.push({ tip: 'guzergah', r, g });
         arac.push({ g, r, f: [], yeni: true });
       } else eslenenRid.add(String(r.id));
       const f = [];
       if (r.id === null) { /* yeni güzergah: araç farkı yok */ } else {
+      const mAd = bolgeAdi(g);
+      if (mAd && !String(r.name || '').trim()) degis.push({ tip: 'ad', r, ad: mAd });
+      else if (mAd && B(r.name).replace(/\s*-\s*/g, '-') !== B(mAd).replace(/\s*-\s*/g, '-')) f.push(`Güzergah adı: programda <b>${esc(r.name)}</b>, MEBBİS'te <b>${esc(mAd)}</b>`);
       if (g.plaka && P(r.plate) !== P(g.plaka)) f.push(`Plaka: programda <b>${esc(r.plate || '—')}</b>, MEBBİS'te <b>${esc(g.plaka)}</b>`);
       if (g.sofor && B(r.driver) !== B(g.sofor)) f.push(`Şoför: programda <b>${esc(r.driver || '—')}</b>, MEBBİS'te <b>${esc(formatNameCase(g.sofor))}</b>`);
       const mv = vakitBul(g);
@@ -3337,7 +3462,8 @@
       if (d.tip === 'tasi') t = `<b>${esc(d.s.name)}</b> (${esc(d.s.grade || d.k.grade)}): ${d.eskiRid ? rAd(routes.find(z => String(z.id) === String(d.eskiRid))) : 'aday listesi'} → <b>${rAd(d.r)}</b>`;
       if (d.tip === 'yeni') t = `<b>${esc(d.k.name)}</b> (${esc(d.k.grade)}) programda yok → <b>${rAd(d.r)}</b> güzergahına eklenecek <span style="color:#b45309">(cinsiyet ve okul no boş kalır)</span>`;
       if (d.tip === 'tc') t = `<b>${esc(d.s.name)}</b>: T.C. kimlik no programa yazılacak`;
-      if (d.tip === 'guzergah') t = `🆕 <b>${esc(d.r.no)} NOLU GÜZERGAH</b> programda yok → oluşturulacak (Şoför: ${esc(d.r.driver)}, Plaka: ${esc(d.r.plate)}, Vakit: ${esc(d.r.vakit || '—')})`;
+      if (d.tip === 'ad') t = `<b>${esc(d.r.no)} NOLU GÜZERGAH</b>: adı boş → <b>${esc(d.ad)}</b> yazılacak`;
+      if (d.tip === 'guzergah') t = `🆕 <b>${esc(d.r.no)} NOLU GÜZERGAH</b> programda yok → oluşturulacak (${d.r.name ? 'Ad: ' + esc(d.r.name) + ', ' : ''}Şoför: ${esc(d.r.driver)}, Plaka: ${esc(d.r.plate)}, Vakit: ${esc(d.r.vakit || '—')}, Kapasite: ${esc(d.r.cap)})`;
       return `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mds="${i}" checked style="margin-top:3px">${t}</label>`;
     };
     const ozet = arac.map(a => {
@@ -3347,10 +3473,10 @@
       return `<tr><td style="padding:4px 8px">${a.yeni ? '🆕' : ok ? '✅' : '⚠️'}</td><td style="padding:4px 8px"><b>${esc(a.g.guzNo)}</b></td><td style="padding:4px 8px">${esc(formatNameCase(a.g.sofor))}</td><td style="padding:4px 8px">${esc(a.g.plaka)}</td><td style="padding:4px 8px;text-align:center">${L}</td><td style="padding:4px 8px;text-align:center">${pr}</td></tr>`;
     }).join('');
     const bolum = (baslik, ic, renk) => ic ? `<div style="margin-top:14px"><div style="font-weight:700;color:${renk};margin-bottom:4px">${baslik}</div>${ic}</div>` : '';
-    let html = `<div style="font-size:13px;color:#475569;margin-bottom:8px">🌐 MEBBİS Taşıma Servis İşlemleri · ${okunan.length} güzergah okundu · MEBBİS'te hiçbir şey değiştirilmedi.</div>
+    let html = `<div style="font-size:13px;color:#475569;margin-bottom:8px">🌐 MEBBİS Taşıma Servis İşlemleri · ${okunan.length} güzergah okundu · MEBBİS'te hiçbir şey değiştirilmedi.${okulYazildi ? ' · Okul adı yazıldı: <b>' + esc(document.getElementById('okul-adi').value) + '</b>' : ''}</div>
       <table style="border-collapse:collapse;font-size:13px;width:100%;background:#f8fafc"><tr style="background:#e2e8f0"><th></th><th style="padding:4px 8px;text-align:left">Güz.</th><th style="padding:4px 8px;text-align:left">Şoför (MEBBİS)</th><th style="padding:4px 8px;text-align:left">Plaka</th><th style="padding:4px 8px">MEBBİS</th><th style="padding:4px 8px">Program</th></tr>${ozet}</table>`;
     html += bolum('Uygulanacak değişiklikler (işaretliler uygulanır)', degis.map(satir).join(''), '#0e7490');
-    html += bolum('Plaka / şoför / vakit farkları — puantaj bozulmasın diye değiştirilmez, gerekiyorsa Servis Bilgileri\'nden düzeltin',
+    html += bolum('Plaka / şoför / vakit / ad farkları — puantaj bozulmasın diye değiştirilmez, gerekiyorsa Servis Bilgileri\'nden düzeltin',
       arac.filter(a => a.f.length).map(a => `<div style="padding:3px 0"><b>${esc(a.g.guzNo)}:</b> ${a.f.join(' · ')}</div>`).join(''), '#b45309');
     html += bolum('Programda bu güzergahta ama MEBBİS\'te hiçbir araçta yok — silinmez, kontrol edin',
       mebbisteYok.map(m => `<div style="padding:3px 0">• <b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}${String(m.s.tc || '').trim() ? '' : ' <span style="color:#b45309">(programda T.C. yok)</span>'}</div>`).join(''), '#b91c1c');
@@ -3387,6 +3513,7 @@
     if (typeof guzergahlariSirala === 'function') guzergahlariSirala();
     secili.forEach(d => {
       if (d.tip === 'guzergah') return;
+      if (d.tip === 'ad') { d.r.name = d.ad; try { if (d.r.seatInfo && !String(d.r.seatInfo.toplamaYeri || '').trim()) d.r.seatInfo.toplamaYeri = d.ad; } catch (e) {} sonuc.push(`${d.r.no} NOLU GÜZERGAH adı: ${d.ad}`); return; }
       if (d.r && d.r.id === null) { sonuc.push(`${(d.s || d.k).name}: güzergahı oluşturulmadığı için atlandı`); return; }
       if (d.tip === 'tc') { d.s.tc = d.k.tc; sonuc.push(`${d.s.name}: T.C. yazıldı`); return; }
       if (d.tip === 'tasi') {
@@ -3414,6 +3541,103 @@
     saveDataToStorage();
     const m = document.getElementById('mebbis-servis-modal'); if (m) m.remove();
     alert('Tamamlandı.\n\n' + sonuc.map(x => '• ' + x).join('\n'));
+  }
+  /* ============================================================
+     MEBBİS ↔ PROGRAM: TEK GÜZERGAH KARŞILAŞTIRMA (✏️ penceresi açıkken)
+     Eşleştirme: güzergah NO + öğrenci T.C. (şoför/plaka/ad farkı önemsiz)
+     "MEBBİS'i düzelt" seçilenler için MEBBİS'teki ✔ işaretleri ayarlanır;
+     KAYDET'e her zaman kullanıcı basar.
+     ============================================================ */
+  let mebbisTekSon = null;
+  function mebbisTekKarsilastir(v) {
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const no = String(v.guzNo || '').trim();
+    const r = routes.find(x => String(x.no || '').trim() === no);
+    if (!r) { alert(`MEBBİS'te açık olan güzergah: ${no || '(numara okunamadı)'}\nProgramda bu numarada güzergah yok.\n\nÖnce "Güzergahları Programa Aktar" ile güzergahları alın ya da Servis Bilgileri'nden ekleyin.`); return; }
+    const hepsi = topluHepsi();
+    const progBul = tc => hepsi.find(h => String(h.s.tc || '').trim() === tc);
+    const rAd = rid => { const x = routes.find(z => String(z.id) === String(rid)); return x ? (x.no + ' NOLU GÜZERGAH') : 'aday listesi'; };
+    const mTc = new Set((v.ogrenciler || []).map(o => o.tc));
+    const satir = [];   // {tur, o, s, rid, secenek:[[deger, etiket]], varsayilan}
+    (v.ogrenciler || []).forEach(o => {
+      const x = progBul(o.tc); const benim = x && String(x.rid) === String(r.id);
+      const ad = x ? x.s.name : formatNameCase(o.ad);
+      if (o.durum === 'yesil') {
+        if (benim) satir.push({ tur: 'ayni', o, ad });
+        else if (x && x.rid) satir.push({ tur: 'cakisma', o, ad, x, aciklama: `MEBBİS'te bu araçta · programda <b>${esc(rAd(x.rid))}</b>`, secenek: [['m-cikar', 'MEBBİS\'ten çıkar'], ['p-tasi', `Programda ${no}'e taşı`]] });
+        else satir.push({ tur: 'cakisma', o, ad, x, aciklama: `MEBBİS'te bu araçta · programda ${x ? 'aday listesinde' : '<b>yok</b>'}`, secenek: [['m-cikar', 'MEBBİS\'ten çıkar'], ['p-tasi', `Programda ${no}'e ${x ? 'al' : 'ekle'}`]] });
+      } else if (benim) {
+        if (o.durum === 'gri') satir.push({ tur: 'ekle', o, ad, x, aciklama: 'Programda bu güzergahta · MEBBİS\'te hiçbir araçta değil', secenek: [['m-ekle', 'MEBBİS\'te bu araca ekle'], ['p-cikar', 'Programda aday listesine al']], varsayilan: 'm-ekle' });
+        else satir.push({ tur: 'cakisma', o, ad, x, aciklama: 'Programda bu güzergahta · MEBBİS\'te <b>başka bir araçta</b> (önce o araçtan çıkarılmalı)', secenek: [['p-cikar', 'Programda aday listesine al']] });
+      }
+    });
+    // programda bu güzergahta olup MEBBİS listesinde hiç olmayanlar
+    (students[r.id] || []).forEach(s => { const tc = String(s.tc || '').trim(); if (!tc || !mTc.has(tc)) satir.push({ tur: 'bilgi', ad: s.name, aciklama: tc ? 'MEBBİS\'te okulun taşınan listesinde yok' : 'Programda T.C. yok, eşleştirilemedi' }); });
+    mebbisTekSon = { v, r, satir };
+    const say = t => satir.filter(x => x.tur === t).length;
+    const grup = (tur, baslik, renk) => {
+      const L = satir.map((x, i) => ({ x, i })).filter(z => z.x.tur === tur); if (!L.length) return '';
+      return `<div style="margin-top:12px"><div style="font-weight:700;color:${renk};margin-bottom:4px">${baslik} (${L.length})</div>` + L.map(({ x, i }) => {
+        const sec = (x.secenek || []).map(([d, e]) => `<label style="margin-right:10px;white-space:nowrap"><input type="radio" name="mtk${i}" value="${d}" ${x.varsayilan === d ? 'checked' : ''}> ${e}</label>`).join('');
+        return `<div style="padding:6px 0;border-bottom:1px solid #eef2f7"><b>${esc(x.ad)}</b> <span style="color:#64748b;font-size:12px">${esc(x.o ? ((String(x.o.sinif || '').match(/\d+/) || [''])[0] + '. sınıf') : '')}</span><div style="font-size:12.5px;color:#475569">${x.aciklama || ''}</div>${sec ? `<div style="font-size:12.5px;margin-top:3px">${sec}<label style="white-space:nowrap"><input type="radio" name="mtk${i}" value="" ${x.varsayilan ? '' : 'checked'}> Dokunma</label></div>` : ''}</div>`;
+      }).join('') + '</div>';
+    };
+    let m = document.getElementById('mebbis-tek-modal'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'mebbis-tek-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:820px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <div style="padding:14px 18px;background:#0e7490;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">⚖️ ${esc(no)} NOLU GÜZERGAH — Program ↔ MEBBİS</div>
+      <div style="padding:14px 18px;overflow:auto;font-size:13.5px">
+        <div style="color:#475569">MEBBİS: ${esc(formatNameCase(v.sofor || ''))} · ${esc(v.plaka || '')} &nbsp;|&nbsp; Program: ${esc(r.driver || '')} · ${esc(r.plate || '')}</div>
+        <div style="margin-top:8px;padding:8px;background:#ecfdf5;border-radius:8px;color:#065f46">✅ Aynı olan: <b>${say('ayni')}</b> öğrenci</div>
+        ${grup('ekle', '➕ MEBBİS\'e eklenebilecekler', '#0e7490')}
+        ${grup('cakisma', '⚠️ Çakışanlar — hangisi doğruysa seçin', '#b45309')}
+        ${grup('bilgi', 'ℹ️ Bilgi', '#6b7280')}
+        ${!say('ekle') && !say('cakisma') ? '<div style="margin-top:12px;font-weight:700;color:#065f46">Bu güzergahta program ile MEBBİS aynı. Yapılacak bir şey yok.</div>' : ''}
+        <div style="margin-top:12px;font-size:12px;color:#64748b">"MEBBİS" seçenekleri için program MEBBİS penceresindeki ✔ işaretlerini ayarlar, <b>kaydetmez</b>. Kaydet'e siz basarsınız. "Program" seçenekleri sadece programı değiştirir.</div>
+      </div>
+      <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
+        ${say('ekle') || say('cakisma') ? '<button type="button" onclick="mebbisTekUygula()" style="background:#0e7490;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Uygula</button>' : ''}
+        <button type="button" onclick="document.getElementById('mebbis-tek-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
+    document.body.appendChild(m);
+  }
+  function mebbisTekUygula() {
+    const S = mebbisTekSon; if (!S) return;
+    const { r, satir, v } = S; const ekle = [], cikar = [], prog = [];
+    satir.forEach((x, i) => {
+      const c = document.querySelector(`#mebbis-tek-modal input[name="mtk${i}"]:checked`); const d = c ? c.value : '';
+      if (d === 'm-ekle') ekle.push({ tc: x.o.tc, ad: x.ad });
+      if (d === 'm-cikar') cikar.push({ tc: x.o.tc, ad: x.ad });
+      if (d === 'p-tasi' || d === 'p-cikar') prog.push({ d, x });
+    });
+    if (!ekle.length && !cikar.length && !prog.length) { alert('Hiçbir seçim yapılmadı.'); return; }
+    if (!confirm(`Uygulanacak:\n• MEBBİS'te eklenecek: ${ekle.length}\n• MEBBİS'ten çıkarılacak: ${cikar.length}\n• Programda değişecek: ${prog.length}\n\nMEBBİS'te sadece işaretler ayarlanır; KAYDET'e siz basacaksınız. Devam edilsin mi?`)) return;
+    const etk = new Set(), sonuc = [];
+    prog.forEach(({ d, x }) => {
+      if (d === 'p-tasi') {
+        let s = x.x ? x.x.s : null;
+        if (s) {
+          if (x.x.rid) { const L = students[x.x.rid] || []; const k = L.indexOf(s); if (k >= 0) L.splice(k, 1); const e = routes.find(z => String(z.id) === String(x.x.rid)); if (e) etk.add(e); }
+          else { const k = candidateStudents.indexOf(s); if (k >= 0) candidateStudents.splice(k, 1); }
+        } else {
+          const subeH = ((String(x.o.sube || '').match(/\/\s*([A-ZÇĞİÖŞÜ])\s*Şube/i) || [])[1] || '').toLocaleUpperCase('tr-TR');
+          const nrm = sinifNormalle(String(x.o.sinif || '').replace(/\D/g, ''), subeH);
+          s = { tc: x.o.tc, name: formatNameCase(x.o.ad), grade: nrm.grade || '', sube: nrm.sube || subeH, okulNo: '', cinsiyet: '' };
+        }
+        (students[r.id] = students[r.id] || []).push(s); placeStudentInFirstFreeSeat(r, s);
+        sonuc.push(`Program: ${s.name} → ${r.no} NOLU GÜZERGAH`);
+      } else {
+        const s = x.x.s; const L = students[r.id] || []; const k = L.indexOf(s); if (k >= 0) L.splice(k, 1);
+        candidateStudents.push(s); etk.add(r); sonuc.push(`Program: ${s.name} → aday listesi`);
+      }
+    });
+    etk.forEach(e => { try { koltukKoru(e); } catch (er) {} });
+    if (prog.length) { if (typeof refreshAllRouteViews === 'function') refreshAllRouteViews(); try { renderAdayList(); } catch (e) {} try { renderStudentSearch(); } catch (e) {} saveDataToStorage(); }
+    const m = document.getElementById('mebbis-tek-modal'); if (m) m.remove();
+    if (ekle.length || cikar.length) {
+      if (window.masaustu && window.masaustu.mebbisIsaretle) window.masaustu.mebbisIsaretle({ guzNo: v.guzNo, plaka: v.plaka, ekle, cikar, programSonuc: sonuc });
+      else alert('MEBBİS işaretleme sadece masaüstü programında çalışır.\n\n' + sonuc.join('\n'));
+    } else alert('Tamamlandı.\n\n' + sonuc.map(x => '• ' + x).join('\n'));
   }
   /* .xlsx okuyucu — internetsiz (tarayıcının kendi açıcısıyla) */
   async function xlsxSatirlariOku(dosya) {
@@ -3475,7 +3699,7 @@
     if (bi < 0) { alert('Bu dosyada "T.C. Kimlik No" başlıklı sütun bulunamadı.\n\nMEB taşıma modülündeki "Öğrenci Planlama Listesi" Excel\'ini seçin.'); return; }
     const bas = satirlar[bi].map(norm);
     const sut = ad => bas.findIndex(h => h === ad || h.includes(ad));
-    const iTc = sut('tckimlik'), iAd = sut('öğrenciadı'), iSube = sut('mevcutşube'), iSinif = sut('mevcutsınıf'), iNo = sut('öğrencinumara'), iCins = sut('cinsiyet'), iAktif = sut('aktiftaşınan');
+    const iTc = sut('tckimlik'), iAd = sut('öğrenciadı'), iSube = sut('mevcutşube'), iSinif = sut('mevcutsınıf'), iNo = sut('öğrencinumara'), iCins = sut('cinsiyet'), iAktif = sut('aktiftaşınan'), iOzel = sut('özeleğitim');
     const kayitlar = [], atlanan = [];
     satirlar.slice(bi + 1).forEach(r => {
       const tc = String(r[iTc] || '').replace(/\D/g, ''); const ad = r[iAd] || '';
@@ -3488,9 +3712,10 @@
       const nrm = sinifNormalle(seviye, harf);
       const c = (r[iCins] || '').toLocaleUpperCase('tr-TR');
       kayitlar.push({ name: formatNameCase(ad), okulNo: String(r[iNo] || '').trim(), grade: nrm.grade, sube: nrm.sube || harf,
-                      cinsiyet: c.startsWith('ERK') ? 'E' : (c.startsWith('KIZ') ? 'K' : ''), tc: tc });
+                      cinsiyet: c.startsWith('ERK') ? 'E' : (c.startsWith('KIZ') ? 'K' : ''), tc: tc,
+                      ozelEgitim: iOzel >= 0 ? /^evet/i.test(String(r[iOzel] || '').trim()) : undefined });
     });
-    topluSatirlar = kayitlar.map(k => ({ tc: k.tc, name: k.name, seviye: (String(k.grade || '').match(/\d{1,2}/) || [''])[0], sube: k.sube || '', okulNo: k.okulNo || '', cinsiyet: k.cinsiyet || '', hedef: ADAY_DEGERI }));
+    topluSatirlar = kayitlar.map(k => ({ tc: k.tc, name: k.name, seviye: (String(k.grade || '').match(/\d{1,2}/) || [''])[0], sube: k.sube || '', okulNo: k.okulNo || '', cinsiyet: k.cinsiyet || '', ozelEgitim: k.ozelEgitim, hedef: ADAY_DEGERI }));
     topluTabloCiz();
     if (bilgi) { bilgi.style.color = '#15803d'; bilgi.innerHTML = `${kayitlar.length} öğrenci okundu` + (atlanan.length ? ` · <span style="color:#b45309;">${atlanan.length} öğrenci "Aktif Taşınan: Hayır" olduğu için alınmadı: ${atlanan.join(', ')}</span>` : '') + '. Tabloyu kontrol edip <b>✅ Ekle / Güncelle</b> deyin.'; }
     const o = document.getElementById('toplu-tablo-govde'); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -11424,6 +11649,7 @@
       tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; color:#888; padding:18px;">Aradığınız kriterlere uyan öğrenci bulunamadı.</td></tr>';
     } else {
       const parcalar = [];   // tek seferde yazmak için biriktirilir
+      const oeTc = new Set(); try { topluHepsi().forEach(h => { if (h.s.ozelEgitim && h.s.tc) oeTc.add(String(h.s.tc)); }); } catch (e) {}
       rows.forEach((r, idx) => {
         const durumRenk = r.durum === 'AKTİF' ? '#15803d' : (r.durum === 'ADAY' ? '#a16207' : (r.durum === 'NAKİL' ? '#b45309' : '#800020'));
         const koltuk = r.seat ? `<b style="color:#4b3f8c;">${r.seat}</b>` : '<span style="color:#bbb;">—</span>';
@@ -11435,7 +11661,7 @@
           <tr${r.durum === 'ADAY' ? ' style="background:#fffbeb;"' : (r.durum === 'NAKİL' ? ' style="background:#fff7ed;"' : '')}>
             <td style="text-align:center; background:#1b4958; color:#fff;">${idx + 1}</td>
             <td style="text-align:center; font-size:11px; font-family:monospace;${tcHataliMi(r.tc) ? ' background:#fee2e2; color:#b91c1c; font-weight:bold;' : ''}" ${tcHataliMi(r.tc) ? `title="${tcHataMetni(r.tc)}"` : ''}>${r.tc || bos}${tcHataliMi(r.tc) ? ' ⚠' : ''}</td>
-            <td><b>${r.name}</b></td>
+            <td><b>${r.name}</b>${r.tc && oeTc.has(String(r.tc)) ? ' <span title="MEBBİS\'te özel eğitim öğrencisi" style="font-size:10px; background:#ede9fe; color:#6d28d9; border-radius:4px; padding:1px 5px; font-weight:bold;">Özel eğitim</span>' : ''}</td>
             <td style="text-align:center;">${seviye || bos}</td>
             <td style="text-align:center;">${r.sube || bos}</td>
             <td style="text-align:center; font-weight:bold; color:#4b3f8c;">${r.okulNo || bos}</td>
@@ -12690,6 +12916,570 @@ function typYazdir(){
 }
 
 window.TYP={ sekme, typDocx, kisiKaydet, kisiDuzenle, kisiSil, kisiVazgec, kisiTcKontrol, typOnizle, typYazdirKisi, typYazdirHepsi, puSecimDegis, puYazdirKisi, puYazdirHepsi, typSecimDegis, typTipDegis, typKisiEkle, typIsaretEkle, typResmiTatilleri, typIsaretTemizle, typHazirla, wordIndir, puCiz, puAyDoldur, puKisiEkle, puIsaretle, puIsaretTemizle, puYazdir, puExcel, adBicimle, typIsaretSil, typYazdir, typAyDegis, puAyDegis, ac, kaydet };
+})();
+</script>
+<script>
+/* CIKTI_BIREBIR */
+/* ============================================================
+   GÜNLÜK TAKİP ÇİZELGESİ: yatay A4'ü tam kaplayan yazdırma,
+   ekrandakinin bire bir aynısı Excel (.xlsx) ve Word (.docx);
+   AYLIK PUANTAJ: yazdırmadaki sayfalarla aynı Word (.docx).
+   Çıktılar sayfanın çizilmiş halinden ölçülerek üretilir.
+   ============================================================ */
+(function () {
+  const MM = 96 / 25.4;                       // 1 mm kaç px
+  const GT = { sayfaG: 297, sayfaY: 210, kenar: 5, payG: 1, payY: 2 };  // yatay A4, 5 mm kenar
+
+  function ascAd(s) {
+    const t = { 'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U' };
+    return String(s || '').replace(/[çÇğĞıİöÖşŞüÜ]/g, h => t[h]).replace(/[^A-Za-z0-9 ._()-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) || 'cikti';
+  }
+  function indir(blob, ad) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ascAd(ad);
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  function tarihEki() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}.${p(d.getMinutes())}`;
+  }
+  function ayEtiketi() {
+    try { return `${monthNames[parseInt(document.getElementById('sel-month').value)]} ${document.getElementById('sel-year').value}`; } catch (e) { return ''; }
+  }
+
+  /* ---------- ölçüm alanı (ekranda görünmez ama çizilir) ---------- */
+  function olcumAlani(genislikPx) {
+    let k = document.getElementById('cikti-olcum');
+    if (!k) { k = document.createElement('div'); k.id = 'cikti-olcum'; document.body.appendChild(k); }
+    k.setAttribute('style', 'position:absolute; left:-30000px; top:0; visibility:hidden; pointer-events:none; background:#fff;' + (genislikPx ? `width:${genislikPx}px;` : ''));
+    k.innerHTML = '';
+    return k;
+  }
+
+  /* ---------- günlük takip sayfaları (yatay A4, tek sayfayı tam kaplar) ---------- */
+  function gtStilEkle() {
+    if (document.getElementById('gt-sayfa-stil')) return;
+    const st = document.createElement('style'); st.id = 'gt-sayfa-stil';
+    const w = GT.sayfaG - 2 * GT.kenar - GT.payG, h = GT.sayfaY - 2 * GT.kenar - GT.payY;
+    st.textContent =
+      `.gt-sayfa { width:${w}mm; height:${h}mm; overflow:hidden; background:#fff; }
+       .gt-sayfa .sheet-wrapper { min-width:0 !important; width:100%; height:100%; display:flex; flex-direction:column; }
+       .gt-sayfa .sheet-table th[onclick], .gt-sayfa .sheet-table td[onclick] { cursor:default; }
+       .gt-sayfa.batch-page-break { margin-bottom:0; }
+       @media print { body.printing-batch-daily #printable-batch-daily-sheets .gt-sayfa { margin:0; }
+         body.printing-batch-daily .content, body.printing-batch-daily .container { min-height:0 !important; padding:0 !important; margin:0 !important; } }`;
+    document.head.appendChild(st);
+  }
+  function gtSayfaHtml(route, son) {
+    const okulAdi = document.getElementById('okul-adi').value;
+    const mdrYard = formatNameCase(document.getElementById('mdr-yard').value);
+    const okulMdr = formatNameCase(document.getElementById('okul-mudur').value);
+    const tEl = document.querySelector('#page-cizelge .global-date-sync') || document.querySelector('.global-date-sync');
+    const tarih = tEl ? tEl.value : '';
+    return `<div class="gt-sayfa${son ? '' : ' batch-page-break'}"><div class="sheet-wrapper">` +
+      `<div class="sheet-header-title">${okulAdi} - ${guzergahTamAdi(route)} SERVİS TUTANAĞI</div>` +
+      buildDailySheetHtml(route) +
+      `<div class="sheet-footer-compact"><div><b>İNCELEYEN</b><br><span>${mdrYard}</span><br>Müdür Yardımcısı<br><span style="font-size:10px; font-weight:bold;">${tarih}</span></div>` +
+      `<div><b>ONAYLAYAN</b><br><span>${okulMdr}</span><br>Okul Müdürü<br><span style="font-size:10px; font-weight:bold;">${tarih}</span></div></div>` +
+      `</div></div>`;
+  }
+  // tablo satırlarını, sayfanın boş kalan yüksekliği eşit dağılacak şekilde büyüt
+  function gtYerlestir(kap) {
+    kap.querySelectorAll('.gt-sayfa').forEach(s => {
+      const w = s.querySelector('.sheet-wrapper'), tb = s.querySelector('table.sheet-table');
+      if (!w || !tb) return;
+      const satir = [...tb.tBodies[0].rows];
+      if (!satir.length) return;
+      const ws = getComputedStyle(w);
+      const ic = w.clientHeight - parseFloat(ws.paddingTop) - parseFloat(ws.paddingBottom);
+      const ilk = w.firstElementChild, son = w.lastElementChild;
+      const dolu = son.getBoundingClientRect().bottom - ilk.getBoundingClientRect().top + parseFloat(getComputedStyle(ilk).marginTop || 0);
+      const fark = ic - dolu - 2;
+      const yuk = satir.map(r => r.getBoundingClientRect().height);
+      const ek = fark / satir.length;
+      satir.forEach((r, i) => { r.style.height = Math.max(14, yuk[i] + ek).toFixed(2) + 'px'; });
+    });
+  }
+  function gtRotalar(tur) {
+    if (tur === 'hepsi') return (routes || []).slice();
+    const sel = document.getElementById('cizelge-guzergah-sec');
+    const rId = parseInt(sel ? sel.value : 0);
+    const r = (routes || []).find(x => x.id == rId) || (routes || [])[0];
+    return r ? [r] : [];
+  }
+  function gtHazirla(tur) {
+    gtStilEkle();
+    const rotalar = gtRotalar(tur);
+    if (!rotalar.length) { alert('Güzergah bulunamadı.'); return null; }
+    const kap = olcumAlani(0);
+    kap.innerHTML = rotalar.map((r, i) => gtSayfaHtml(r, i === rotalar.length - 1)).join('');
+    gtYerlestir(kap);
+    return { kap, rotalar };
+  }
+
+  /* ---------- yazdırma ---------- */
+  function gtYazdir(tur) {
+    const h = gtHazirla(tur); if (!h) return;
+    const hedef = document.getElementById('printable-batch-daily-sheets');
+    if (!hedef) return;
+    hedef.innerHTML = h.kap.innerHTML; h.kap.innerHTML = '';
+    let st = document.getElementById('gt-sayfa-yonu');
+    if (!st) { st = document.createElement('style'); st.id = 'gt-sayfa-yonu'; document.head.appendChild(st); }
+    st.textContent = `@media print{@page{size:A4 landscape;margin:${GT.kenar}mm}}`;
+    document.body.classList.add('printing-batch-daily');
+    try { window.print(); } finally {
+      document.body.classList.remove('printing-batch-daily');
+      st.textContent = '';
+    }
+  }
+
+  /* ---------- sayfayı modele çevir (başlık / tablo / imza blokları) ---------- */
+  function renk(c) {
+    const m = String(c || '').match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?/);
+    if (!m) return '';
+    if (m[4] !== undefined && parseFloat(m[4]) < 0.05) return '';
+    return [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+  function hizalama(cs) {
+    const t = cs.textAlign;
+    if (/center/.test(t)) return 'center';
+    if (t === 'right' || t === 'end') return 'right';
+    return 'left';
+  }
+  // bir hücre/öğe içindeki yazı parçaları: [{t, b, sz(px), renk, br}]
+  function parcalar(el) {
+    const out = [];
+    const ekle = (t, cs) => {
+      if (!t) return;
+      if (cs.textTransform === 'uppercase') t = t.toLocaleUpperCase('tr-TR');
+      out.push({ t, b: (parseInt(cs.fontWeight) || 400) >= 600, sz: parseFloat(cs.fontSize) || 10, renk: renk(cs.color) || '000000' });
+    };
+    const satirSonu = () => { if (out.length && !out[out.length - 1].br) out.push({ br: true }); };
+    (function gez(n) {
+      n.childNodes.forEach(c => {
+        if (c.nodeType === 3) {
+          const t = c.nodeValue.replace(/\s+/g, ' ');
+          if (t.trim() || (out.length && !out[out.length - 1].br)) ekle(t, getComputedStyle(c.parentElement));
+          return;
+        }
+        if (c.nodeType !== 1) return;
+        const cs = getComputedStyle(c);
+        if (cs.display === 'none' || c.classList.contains('no-print')) return;
+        const tag = c.tagName;
+        if (tag === 'BR') { out.push({ br: true }); return; }
+        if (tag === 'INPUT' || tag === 'TEXTAREA') { ekle(c.value, cs); return; }
+        if (tag === 'SELECT') { ekle(c.options[c.selectedIndex] ? c.options[c.selectedIndex].text : '', cs); return; }
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'BUTTON') return;
+        const blok = /^(block|flex|grid|list-item|table)/.test(cs.display);
+        if (blok) satirSonu();
+        gez(c);
+        if (blok) satirSonu();
+      });
+    })(el);
+    // baştaki/sondaki boşluk ve satır sonlarını at, ardışık satır sonlarını teke indir
+    const temiz = [];
+    out.forEach(x => {
+      if (x.br) { if (temiz.length && !temiz[temiz.length - 1].br) temiz.push(x); return; }
+      if (temiz.length && temiz[temiz.length - 1].br) x.t = x.t.replace(/^\s+/, '');
+      if (!temiz.length) x.t = x.t.replace(/^\s+/, '');
+      if (x.t) temiz.push(x);
+    });
+    while (temiz.length && (temiz[temiz.length - 1].br || !temiz[temiz.length - 1].t.trim())) temiz.pop();
+    if (temiz.length) temiz[temiz.length - 1].t = temiz[temiz.length - 1].t.replace(/\s+$/, '');
+    temiz.forEach((x, i) => { if (!x.br && temiz[i + 1] && temiz[i + 1].br) x.t = x.t.replace(/\s+$/, ''); });
+    out.length = 0; out.push(...temiz.filter(x => x.br || x.t));
+    return out;
+  }
+  function kenarOku(cs, yon) {
+    const w = parseFloat(cs[`border${yon}Width`]) || 0, s = cs[`border${yon}Style`];
+    if (!w || s === 'none' || s === 'hidden') return '';
+    if (s === 'dotted' || s === 'dashed') return 'dotted';
+    return w >= 1.75 ? 'medium' : 'thin';
+  }
+  function dikeyMi(td) {
+    const all = [td, ...td.querySelectorAll('*')];
+    return all.some(e => /^vertical/.test(getComputedStyle(e).writingMode));
+  }
+  function tabloModeli(tablo, x0, y0) {
+    const tr = [...tablo.rows];
+    const dolu = {}, hucreler = [];
+    let sutun = 0;
+    tr.forEach((r, ri) => {
+      let c = 0;
+      [...r.cells].forEach(td => {
+        while (dolu[ri + ':' + c]) c++;
+        const cs = td.colSpan || 1, rs = Math.min(td.rowSpan || 1, tr.length - ri);
+        for (let i = 0; i < rs; i++) for (let j = 0; j < cs; j++) dolu[(ri + i) + ':' + (c + j)] = 1;
+        hucreler.push({ td, r: ri, c, rs, cs });
+        c += cs; sutun = Math.max(sutun, c);
+      });
+    });
+    // sütun sınırları (px)
+    const xs = new Array(sutun + 1).fill(null);
+    hucreler.forEach(h => {
+      const b = h.td.getBoundingClientRect();
+      if (xs[h.c] === null || h.cs === 1) xs[h.c] = b.left - x0;
+      if (xs[h.c + h.cs] === null || h.cs === 1) xs[h.c + h.cs] = b.right - x0;
+    });
+    for (let i = 0; i <= sutun; i++) if (xs[i] === null) {
+      let a = i - 1; while (a >= 0 && xs[a] === null) a--;
+      let b = i + 1; while (b <= sutun && xs[b] === null) b++;
+      xs[i] = (a >= 0 && b <= sutun) ? xs[a] + (xs[b] - xs[a]) * (i - a) / (b - a) : (a >= 0 ? xs[a] : xs[b]);
+    }
+    const ys = [tr[0].getBoundingClientRect().top - y0];
+    tr.forEach(r => ys.push(r.getBoundingClientRect().bottom - y0));
+    const tcs = getComputedStyle(tablo);
+    const tk = { t: kenarOku(tcs, 'Top'), b: kenarOku(tcs, 'Bottom'), l: kenarOku(tcs, 'Left'), r: kenarOku(tcs, 'Right') };
+    const agir = (a, b) => (a === 'medium' || b === 'medium') ? 'medium' : (a || b);
+    hucreler.forEach(h => {
+      const cs = getComputedStyle(h.td);
+      h.p = parcalar(h.td);
+      h.h = hizalama(cs);
+      h.v = cs.verticalAlign === 'top' ? 'top' : (cs.verticalAlign === 'bottom' ? 'bottom' : 'center');
+      h.dikey = dikeyMi(h.td);
+      h.dolgu = renk(cs.backgroundColor);
+      h.k = { t: kenarOku(cs, 'Top'), b: kenarOku(cs, 'Bottom'), l: kenarOku(cs, 'Left'), r: kenarOku(cs, 'Right') };
+      if (h.r === 0) h.k.t = agir(h.k.t, tk.t);
+      if (h.r + h.rs === tr.length) h.k.b = agir(h.k.b, tk.b);
+      if (h.c === 0) h.k.l = agir(h.k.l, tk.l);
+      if (h.c + h.cs === sutun) h.k.r = agir(h.k.r, tk.r);
+      delete h.td;
+    });
+    return { tur: 'tablo', xs, ys, sutun, satir: tr.length, hucreler, ust: ys[0], alt: ys[ys.length - 1] };
+  }
+  function sayfaModeli(w) {
+    const b = w.getBoundingClientRect(), x0 = b.left, y0 = b.top;
+    const ws = getComputedStyle(w);
+    const bloklar = [];
+    (function gez(n) {
+      [...n.children].forEach(e => {
+        const cs = getComputedStyle(e);
+        if (cs.display === 'none' || e.classList.contains('no-print')) return;
+        const r = e.getBoundingClientRect();
+        if (e.tagName === 'TABLE') { bloklar.push(tabloModeli(e, x0, y0)); return; }
+        if (e.classList.contains('sheet-footer-compact')) {
+          const sut = [...e.children].filter(c => getComputedStyle(c).display !== 'none').map(c => {
+            const q = c.getBoundingClientRect();
+            return { x1: q.left - x0, x2: q.right - x0, p: parcalar(c) };
+          });
+          // imza yazıları dar kutuda alt satıra kaymasın: her imzayı ortasından genişlet (komşuya taşmadan)
+          sut.forEach((c, i) => {
+            const orta = (c.x1 + c.x2) / 2;
+            const sol = i ? (orta + (sut[i - 1].x1 + sut[i - 1].x2) / 2) / 2 : 0;
+            const sag = i < sut.length - 1 ? (orta + (sut[i + 1].x1 + sut[i + 1].x2) / 2) / 2 : b.width;
+            const yari = Math.min(170, orta - sol, sag - orta);
+            if (yari * 2 > c.x2 - c.x1) { c.x1 = orta - yari; c.x2 = orta + yari; }
+          });
+          bloklar.push({ tur: 'imza', ust: r.top - y0, alt: r.bottom - y0, sut });
+          return;
+        }
+        if (e.querySelector('table, .sheet-footer-compact')) { gez(e); return; }
+        const p = parcalar(e);
+        if (p.length) bloklar.push({ tur: 'yazi', ust: r.top - y0, alt: r.bottom - y0, x1: r.left - x0, x2: r.right - x0, p, h: hizalama(cs) });
+      });
+    })(w);
+    return { gen: b.width, yuk: b.height, cerceve: kenarOku(ws, 'Top'), bloklar };
+  }
+
+  /* ---------- sıkıştırılmış zip (Office dosyaları için); desteklenmezse sıkıştırmasız ---------- */
+  async function zipYap(dosyalar, tur) {
+    if (typeof CompressionStream === 'undefined') return zipBlobYap(dosyalar, tur);
+    const enc = new TextEncoder();
+    const T = zipYap.t || (zipYap.t = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })());
+    const crc = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+    const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+    const parca = [], merkez = []; let ofs = 0;
+    for (const [ad, icerik] of dosyalar) {
+      const a = enc.encode(ad), d = (icerik instanceof Uint8Array) ? icerik : enc.encode(icerik), c = crc(d);
+      let z;
+      try { z = new Uint8Array(await new Response(new Blob([d]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); }
+      catch (e) { return zipBlobYap(dosyalar, tur); }
+      const ortak = [...u16(20), ...u16(0x0800), ...u16(8), ...u16(0), ...u16(0x21), ...u32(c), ...u32(z.length), ...u32(d.length), ...u16(a.length), ...u16(0)];
+      const yerel = new Uint8Array([0x50, 0x4b, 3, 4, ...ortak]); parca.push(yerel, a, z);
+      merkez.push(new Uint8Array([0x50, 0x4b, 1, 2, ...u16(20), ...ortak, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(ofs)]), a);
+      ofs += yerel.length + a.length + z.length;
+    }
+    const mb = merkez.reduce((t, x) => t + x.length, 0);
+    const son = new Uint8Array([0x50, 0x4b, 5, 6, ...u16(0), ...u16(0), ...u16(dosyalar.length), ...u16(dosyalar.length), ...u32(mb), ...u32(ofs), ...u16(0)]);
+    return new Blob([...parca, ...merkez, son], { type: tur });
+  }
+
+  /* ---------- XML yardımcıları ---------- */
+  const xe = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const xmlBas = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const FONT = 'Segoe UI';
+
+  /* ---------- XLSX ---------- */
+  function xlsxYap(sayfalar, sec) {
+    sec = sec || {};
+    const harf = n => { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+    const fontlar = [`<font><sz val="10"/><color rgb="FF000000"/><name val="${FONT}"/></font>`], fontNo = { 'x': 0 };
+    const font = (sz, b, rk) => { const k = [sz, b ? 1 : 0, rk].join('|'); if (fontNo[k] === undefined) { fontNo[k] = fontlar.length; fontlar.push(`<font>${b ? '<b/>' : ''}<sz val="${sz}"/><color rgb="FF${rk}"/><name val="${FONT}"/></font>`); } return fontNo[k]; };
+    const dolgular = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'], dolguNo = {};
+    const dolgu = rk => { if (!rk || rk === 'FFFFFF') return 0; if (dolguNo[rk] === undefined) { dolguNo[rk] = dolgular.length; dolgular.push(`<fill><patternFill patternType="solid"><fgColor rgb="FF${rk}"/><bgColor indexed="64"/></patternFill></fill>`); } return dolguNo[rk]; };
+    const kenarlar = ['<border><left/><right/><top/><bottom/><diagonal/></border>'], kenarNo = { '||||': 0 };
+    const kenarT = k => { const s = v => v ? ` style="${v}"` : ''; const ic = v => v ? '<color rgb="FF000000"/>' : '';
+      return `<border><left${s(k.l)}>${ic(k.l)}</left><right${s(k.r)}>${ic(k.r)}</right><top${s(k.t)}>${ic(k.t)}</top><bottom${s(k.b)}>${ic(k.b)}</bottom><diagonal/></border>`.replace(/<(left|right|top|bottom)><\/\1>/g, '<$1/>'); };
+    const kenar = k => { const a = [k.l || '', k.r || '', k.t || '', k.b || ''].join('|'); if (kenarNo[a] === undefined) { kenarNo[a] = kenarlar.length; kenarlar.push(kenarT(k)); } return kenarNo[a]; };
+    const xfler = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'], xfNo = {};
+    const xf = o => { const f = font(o.sz || 10, o.b, o.renk || '000000'), d = dolgu(o.dolgu), k = kenar(o.k || {});
+      const a = [f, d, k, o.h || 'center', o.v || 'center', o.rot || 0, o.wrap ? 1 : 0].join('|');
+      if (xfNo[a] === undefined) { xfNo[a] = xfler.length; xfler.push(`<xf numFmtId="0" fontId="${f}" fillId="${d}" borderId="${k}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${o.h || 'center'}" vertical="${o.v || 'center'}"${o.rot ? ` textRotation="${o.rot}"` : ''}${o.wrap ? ' wrapText="1"' : ''}/></xf>`); }
+      return xfNo[a]; };
+    const pt = px => Math.round(px * 0.75 * 2) / 2;
+    const zengin = p => {
+      const parca = []; let yazi = '';
+      p.forEach(x => { if (x.br) { if (parca.length) parca[parca.length - 1].t += '\n'; yazi += '\n'; } else { parca.push({ ...x }); yazi += x.t; } });
+      return { parca, yazi };
+    };
+    const hucreXml = (ref, st, p) => {
+      if (!p || !p.length) return `<c r="${ref}" s="${st}"/>`;
+      const z = zengin(p);
+      const tek = z.parca.every(x => x.b === z.parca[0].b && pt(x.sz) === pt(z.parca[0].sz) && x.renk === z.parca[0].renk);
+      if (tek) {
+        const v = z.yazi.trim();
+        if (/^\d+$/.test(v) && v.length < 10) return `<c r="${ref}" s="${st}"><v>${v}</v></c>`;
+        return `<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${xe(z.yazi)}</t></is></c>`;
+      }
+      return `<c r="${ref}" s="${st}" t="inlineStr"><is>${z.parca.map(x => `<r><rPr>${x.b ? '<b/>' : ''}<sz val="${pt(x.sz)}"/><color rgb="FF${x.renk}"/><rFont val="${FONT}"/></rPr><t xml:space="preserve">${xe(x.t)}</t></r>`).join('')}</is></c>`;
+    };
+    const sayfaXml = s => {
+      // ortak sütun sınırları
+      let sinir = [0, s.gen];
+      s.bloklar.forEach(b => {
+        if (b.tur === 'tablo') sinir.push(...b.xs);
+        else if (b.tur === 'imza') b.sut.forEach(c => sinir.push(c.x1, c.x2));
+      });
+      sinir = sinir.map(x => Math.max(0, Math.min(s.gen, x))).sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 2.5);
+      if (s.gen - sinir[sinir.length - 1] > 0.5) sinir.push(s.gen); else sinir[sinir.length - 1] = s.gen;
+      const sut = x => { let en = 0, f = Infinity; sinir.forEach((v, i) => { const d = Math.abs(v - x); if (d < f) { f = d; en = i; } }); return en; };
+      const S = sinir.length - 1;
+      const hucre = {}, birles = [], yuk = [];
+      let satir = 0;
+      const yeniSatir = px => { satir++; yuk[satir] = px; return satir; };
+      const koy = (r, c, o, p) => { (hucre[r] = hucre[r] || {})[c] = { o, p }; };
+      let y = 0;
+      const bosluk = alt => { if (alt - y > 1.5) yeniSatir(alt - y); };
+      s.bloklar.forEach(b => {
+        bosluk(b.ust);
+        if (b.tur === 'yazi') {
+          const r = yeniSatir(b.alt - b.ust), p = b.p, f = p.find(x => !x.br) || {};
+          const o = { sz: pt(f.sz || 13), b: f.b, renk: f.renk, h: b.h, wrap: true };
+          koy(r, 0, o, p); for (let c = 1; c < S; c++) koy(r, c, o, null);
+          if (S > 1) birles.push(`A${r}:${harf(S - 1)}${r}`);
+        } else if (b.tur === 'tablo') {
+          const ilk = satir + 1;
+          for (let i = 0; i < b.satir; i++) yeniSatir(b.ys[i + 1] - b.ys[i]);
+          const map = b.xs.map(sut);
+          b.hucreler.forEach(h => {
+            const r1 = ilk + h.r, r2 = r1 + h.rs - 1, c1 = map[h.c], c2 = Math.max(c1, map[h.c + h.cs] - 1);
+            const f = h.p.find(x => !x.br) || {};
+            const o = { sz: pt(f.sz || 10), b: f.b, renk: f.renk || '000000', h: h.h, v: h.v, rot: h.dikey ? 90 : 0, wrap: !h.dikey, dolgu: h.dolgu, k: h.k };
+            for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) koy(r, c, o, (r === r1 && c === c1) ? h.p : null);
+            if (r2 > r1 || c2 > c1) birles.push(`${harf(c1)}${r1}:${harf(c2)}${r2}`);
+          });
+        } else if (b.tur === 'imza') {
+          const r = yeniSatir(b.alt - b.ust);
+          b.sut.forEach(cl => {
+            const c1 = sut(cl.x1), c2 = Math.max(c1, sut(cl.x2) - 1);
+            const f = cl.p.find(x => !x.br) || {};
+            const o = { sz: pt(f.sz || 10), b: f.b, renk: '000000', h: 'center', v: 'top', wrap: true };
+            for (let c = c1; c <= c2; c++) koy(r, c, o, c === c1 ? cl.p : null);
+            if (c2 > c1) birles.push(`${harf(c1)}${r}:${harf(c2)}${r}`);
+          });
+        }
+        y = b.alt;
+      });
+      bosluk(s.yuk);
+      // dış çerçeve (sayfadaki kalın kenar)
+      if (s.cerceve) {
+        for (let r = 1; r <= satir; r++) for (let c = 0; c < S; c++) {
+          if (r !== 1 && r !== satir && c !== 0 && c !== S - 1) continue;
+          const h = (hucre[r] = hucre[r] || {})[c] || (hucre[r][c] = { o: {}, p: null });
+          const k = { ...(h.o.k || {}) };
+          if (r === 1) k.t = 'medium'; if (r === satir) k.b = 'medium'; if (c === 0) k.l = 'medium'; if (c === S - 1) k.r = 'medium';
+          h.o = { ...h.o, k };
+        }
+      }
+      let sd = '';
+      for (let r = 1; r <= satir; r++) {
+        const h = hucre[r] || {};
+        sd += `<row r="${r}" ht="${pt(yuk[r])}" customHeight="1">`;
+        Object.keys(h).map(Number).sort((a, b) => a - b).forEach(c => { sd += hucreXml(harf(c) + r, xf(h[c].o), h[c].p); });
+        sd += '</row>';
+      }
+      const cols = sinir.slice(1).map((x, i) => { const px = x - sinir[i]; const w = Math.max(0.3, (px - 5) / 7); return `<col min="${i + 1}" max="${i + 1}" width="${w.toFixed(2)}" customWidth="1"/>`; }).join('');
+      const m = (sec.kenarMm || 5) / 25.4;
+      return xmlBas + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+        `<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${harf(S - 1)}${satir}"/>` +
+        `<sheetViews><sheetView workbookViewId="0" showGridLines="0" zoomScale="100"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>` +
+        `<cols>${cols}</cols><sheetData>${sd}</sheetData>` +
+        (birles.length ? `<mergeCells count="${birles.length}">${birles.map(x => `<mergeCell ref="${x}"/>`).join('')}</mergeCells>` : '') +
+        `<printOptions horizontalCentered="1" verticalCentered="1"/>` +
+        `<pageMargins left="${m.toFixed(3)}" right="${m.toFixed(3)}" top="${m.toFixed(3)}" bottom="${m.toFixed(3)}" header="0" footer="0"/>` +
+        `<pageSetup paperSize="9" orientation="${sec.dikey ? 'portrait' : 'landscape'}" fitToWidth="1" fitToHeight="1"/></worksheet>`;
+    };
+    const adlar = {}, sayfaAd = a => { let t = String(a || 'Sayfa').replace(/[\\\/\?\*\[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Sayfa'; let n = t, i = 2; while (adlar[n.toLocaleLowerCase('tr')]) n = t.slice(0, 27) + ' (' + (i++) + ')'; adlar[n.toLocaleLowerCase('tr')] = 1; return n; };
+    const levhalar = sayfalar.map(s => ({ ad: sayfaAd(s.ad), xml: sayfaXml(s.model) }));
+    const styles = xmlBas + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fontlar.length}">${fontlar.join('')}</fonts><fills count="${dolgular.length}">${dolgular.join('')}</fills><borders count="${kenarlar.length}">${kenarlar.join('')}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfler.length}">${xfler.join('')}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+    const wb = xmlBas + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${levhalar.map((l, i) => `<sheet name="${xe(l.ad)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>`;
+    const wbRels = xmlBas + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${levhalar.map((l, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${levhalar.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    const tipler = xmlBas + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${levhalar.map((l, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`;
+    const rels = xmlBas + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+    return zipYap([['[Content_Types].xml', tipler], ['_rels/.rels', rels], ['xl/workbook.xml', wb], ['xl/_rels/workbook.xml.rels', wbRels], ['xl/styles.xml', styles],
+      ...levhalar.map((l, i) => [`xl/worksheets/sheet${i + 1}.xml`, l.xml])], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  }
+
+  /* ---------- DOCX ---------- */
+  function docxYap(sayfalar, sec) {
+    sec = sec || {};
+    const TW = 1440 / 96;                                   // 1 px = 15 twip
+    const mmTw = mm => Math.round(mm * 1440 / 25.4);
+    const pg = sec.dikey ? { w: 11906, h: 16838 } : { w: 16838, h: 11906 };
+    const kenar = mmTw(sec.kenarMm || 5);
+    const UW = pg.w - 2 * kenar, UH = pg.h - 2 * kenar - mmTw(sec.payMm || 3);
+    const kenarXml = (ad, v) => v ? `<w:${ad} w:val="${v === 'dotted' ? 'dotted' : 'single'}" w:sz="${v === 'medium' ? 12 : 4}" w:space="0" w:color="000000"/>` : `<w:${ad} w:val="nil"/>`;
+    const run = (x, s) => x.br ? '<w:r><w:br/></w:r>' :
+      `<w:r><w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>${x.b ? '<w:b/><w:bCs/>' : ''}${x.renk && x.renk !== '000000' ? `<w:color w:val="${x.renk}"/>` : ''}<w:sz w:val="${Math.max(6, Math.round(x.sz * 1.5 * s))}"/><w:szCs w:val="${Math.max(6, Math.round(x.sz * 1.5 * s))}"/></w:rPr><w:t xml:space="preserve">${xe(x.t)}</w:t></w:r>`;
+    const para = (p, jc, s, ek) => `<w:p><w:pPr>${ek || ''}<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="${jc || 'center'}"/></w:pPr>${(p || []).map(x => run(x, s)).join('')}</w:p>`;
+    const bosluk = (tw, ek) => `<w:p><w:pPr>${ek || ''}<w:spacing w:before="0" w:after="0" w:line="${Math.max(20, Math.round(tw))}" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>`;
+    const govde = [];
+    sayfalar.forEach((sf, si) => {
+      const m = sf.model;
+      const sx = UW / (m.gen * TW);
+      const s = Math.min(sx, UH / (m.yuk * TW));          // yazı ve yükseklik ölçeği
+      const X = px => Math.round(px * TW * sx), Y = px => Math.round(px * TW * s);
+      let y = 0, ilk = true;
+      const sonraki = () => { const e = (ilk && si > 0) ? '<w:pageBreakBefore/>' : ''; ilk = false; return e; };
+      m.bloklar.forEach(b => {
+        const ara = b.ust - y;
+        if (ara > 0.5 || ilk || b.tur === 'tablo') govde.push(bosluk(Math.max(20, Y(Math.max(0, ara))), sonraki()));
+        if (b.tur === 'yazi') {
+          govde.push(`<w:p><w:pPr>${sonraki()}<w:spacing w:before="0" w:after="0" w:line="${Math.max(20, Y(b.alt - b.ust))}" w:lineRule="exact"/><w:jc w:val="${b.h}"/></w:pPr>${b.p.map(x => run(x, s)).join('')}</w:p>`);
+        } else if (b.tur === 'tablo') {
+          const gx = b.xs.map(X), gen = gx[gx.length - 1] - gx[0];
+          const grid = gx.slice(1).map((v, i) => Math.max(15, v - gx[i]));
+          const kaplanan = {};
+          b.hucreler.forEach(h => { for (let i = 0; i < h.rs; i++) for (let j = 0; j < h.cs; j++) kaplanan[(h.r + i) + ':' + (h.c + j)] = { h, bas: i === 0 && j === 0, ust: i === 0 }; });
+          let rows = '';
+          for (let r = 0; r < b.satir; r++) {
+            rows += `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.max(20, Y(b.ys[r + 1] - b.ys[r]))}" w:hRule="exact"/></w:trPr>`;
+            for (let c = 0; c < b.sutun;) {
+              const k = kaplanan[r + ':' + c];
+              if (!k) { rows += `<w:tc><w:tcPr><w:tcW w:w="${grid[c]}" w:type="dxa"/></w:tcPr><w:p/></w:tc>`; c++; continue; }
+              const h = k.h;
+              if (c !== h.c) { c++; continue; }
+              const genis = grid.slice(h.c, h.c + h.cs).reduce((a, v) => a + v, 0);
+              const tcPr = `<w:tcPr><w:tcW w:w="${genis}" w:type="dxa"/>${h.cs > 1 ? `<w:gridSpan w:val="${h.cs}"/>` : ''}${h.rs > 1 ? (k.ust ? '<w:vMerge w:val="restart"/>' : '<w:vMerge/>') : ''}` +
+                `<w:tcBorders>${kenarXml('top', h.k.t)}${kenarXml('left', h.k.l)}${kenarXml('bottom', h.k.b)}${kenarXml('right', h.k.r)}</w:tcBorders>` +
+                `${h.dolgu && h.dolgu !== 'FFFFFF' ? `<w:shd w:val="clear" w:color="auto" w:fill="${h.dolgu}"/>` : ''}<w:noWrap w:val="${h.dikey ? '1' : '0'}"/>${h.dikey ? '<w:textDirection w:val="btLr"/>' : ''}<w:vAlign w:val="${h.v}"/></w:tcPr>`;
+              rows += `<w:tc>${tcPr}${k.ust ? para(h.p, h.dikey ? 'center' : h.h, s) : '<w:p/>'}</w:tc>`;
+              c += h.cs;
+            }
+            rows += '</w:tr>';
+          }
+          govde.push(`<w:tbl><w:tblPr><w:tblW w:w="${gen}" w:type="dxa"/><w:tblInd w:w="${gx[0]}" w:type="dxa"/><w:tblLayout w:type="fixed"/>` +
+            `<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="15" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="15" w:type="dxa"/></w:tblCellMar></w:tblPr>` +
+            `<w:tblGrid>${grid.map(g => `<w:gridCol w:w="${g}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`);
+        } else if (b.tur === 'imza') {
+          const sn = [0]; b.sut.forEach(c => sn.push(X(c.x1), X(c.x2))); sn.push(UW);
+          const grid = sn.slice(1).map((v, i) => Math.max(15, v - sn[i]));
+          const hiclik = '<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>';
+          let tcs = '';
+          grid.forEach((g, i) => {
+            const cl = (i % 2 === 1) ? b.sut[(i - 1) / 2] : null;
+            tcs += `<w:tc><w:tcPr><w:tcW w:w="${g}" w:type="dxa"/>${hiclik}<w:vAlign w:val="top"/></w:tcPr>${cl ? para(cl.p, 'center', s) : '<w:p/>'}</w:tc>`;
+          });
+          govde.push(`<w:tbl><w:tblPr><w:tblW w:w="${UW}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>` +
+            `<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr>` +
+            `<w:tblGrid>${grid.map(g => `<w:gridCol w:w="${g}"/>`).join('')}</w:tblGrid><w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.max(20, Y(b.alt - b.ust))}" w:hRule="exact"/></w:trPr>${tcs}</w:tr></w:tbl>`);
+        }
+        y = b.alt;
+      });
+    });
+    govde.push(bosluk(20));
+    const cerceve = sayfalar.some(sf => sf.model.cerceve) ?
+      (() => { const sp = Math.min(31, Math.round((sec.kenarMm || 5) * 72 / 25.4)); const k = ad => `<w:${ad} w:val="single" w:sz="12" w:space="${sp}" w:color="000000"/>`; return `<w:pgBorders w:offsetFrom="page">${k('top')}${k('left')}${k('bottom')}${k('right')}</w:pgBorders>`; })() : '';
+    const doc = xmlBas + `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${govde.join('')}` +
+      `<w:sectPr><w:pgSz w:w="${pg.w}" w:h="${pg.h}"${sec.dikey ? '' : ' w:orient="landscape"'}/><w:pgMar w:top="${kenar}" w:right="${kenar}" w:bottom="${kenar}" w:left="${kenar}" w:header="0" w:footer="0" w:gutter="0"/>${cerceve}</w:sectPr></w:body></w:document>`;
+    const stiller = xmlBas + `<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}" w:eastAsia="${FONT}"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="tr-TR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="15" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="15" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
+    const tipler = xmlBas + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+    const rels = xmlBas + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+    const docRels = xmlBas + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    return zipYap([['[Content_Types].xml', tipler], ['_rels/.rels', rels], ['word/document.xml', doc], ['word/_rels/document.xml.rels', docRels], ['word/styles.xml', stiller]],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  }
+
+  /* ---------- günlük takip: Excel / Word ---------- */
+  function gtModeller(tur) {
+    const h = gtHazirla(tur); if (!h) return null;
+    const sf = [...h.kap.querySelectorAll('.gt-sayfa > .sheet-wrapper')].map((w, i) => {
+      const r = h.rotalar[i];
+      return { ad: `${r.no || ''} ${r.name || ''}`.trim(), model: sayfaModeli(w) };
+    });
+    h.kap.innerHTML = '';
+    return { sf, rotalar: h.rotalar };
+  }
+  function gtDosyaAdi(tur, rotalar, uzanti) {
+    const okul = (document.getElementById('okul-adi') || {}).value || '';
+    const ne = tur === 'hepsi' ? 'Gunluk Takip - Tum Guzergahlar' : `Gunluk Takip - ${rotalar[0].no || ''} ${rotalar[0].name || ''}`;
+    return `${okul} - ${ne} - ${ayEtiketi()} - ${tarihEki()}.${uzanti}`;
+  }
+  async function gtExcel(tur) {
+    try {
+      const m = gtModeller(tur); if (!m) return;
+      indir(await xlsxYap(m.sf, { kenarMm: GT.kenar }), gtDosyaAdi(tur, m.rotalar, 'xlsx'));
+    } catch (e) { alert('Excel hazırlanamadı: ' + e.message); }
+  }
+  async function gtWord(tur) {
+    try {
+      const m = gtModeller(tur); if (!m) return;
+      indir(await docxYap(m.sf, { kenarMm: GT.kenar }), gtDosyaAdi(tur, m.rotalar, 'docx'));
+    } catch (e) { alert('Word hazırlanamadı: ' + e.message); }
+  }
+
+  /* ---------- aylık puantaj: yazdırmadaki sayfalarla aynı Word ---------- */
+  async function puantajWordBirebir() {
+    try {
+      const kap = document.getElementById('printable-batch-puantaj');
+      if (!kap || typeof printPuantajOfficialReport !== 'function') { alert('Puantaj bulunamadı.'); return; }
+      const asil = window.print;
+      window.print = function () {};
+      try { printPuantajOfficialReport(); } finally { window.print = asil; document.body.classList.remove('printing-batch-puantaj'); }
+      const olc = olcumAlani(1100);
+      olc.innerHTML = kap.innerHTML;
+      const sf = [...olc.querySelectorAll('.sheet-wrapper')].map((w, i) => ({ ad: 'Sayfa ' + (i + 1), model: sayfaModeli(w) }));
+      olc.innerHTML = '';
+      if (!sf.length) { alert('Yazdırılacak güzergah bulunamadı.'); return; }
+      const okul = (document.getElementById('okul-adi') || {}).value || '';
+      indir(await docxYap(sf, { kenarMm: 7 }), `${okul} - Puantaj - ${ayEtiketi()} - ${tarihEki()}.docx`);
+    } catch (e) { alert('Word hazırlanamadı: ' + e.message); }
+  }
+
+  /* ---------- düğmeler ---------- */
+  function dugmeleriKur() {
+    const sayfa = document.getElementById('page-cizelge');
+    if (!sayfa || document.getElementById('gt-excel-tek')) return;
+    const tekYaz = [...sayfa.querySelectorAll('button')].find(b => /Bu Güzergahı Yazdır/.test(b.textContent));
+    const topluYaz = [...sayfa.querySelectorAll('button')].find(b => /TOPLU YAZDIR/.test(b.textContent));
+    const dugme = (id, sinif, yazi, fn) => { const b = document.createElement('button'); b.id = id; b.className = 'btn-nav ' + sinif; b.style.cssText = 'padding:6px 15px; width:auto;'; b.textContent = yazi; b.onclick = fn; return b; };
+    if (tekYaz) {
+      tekYaz.removeAttribute('onclick'); tekYaz.onclick = () => gtYazdir('tek');
+      tekYaz.after(dugme('gt-excel-tek', 'btn-green', "📊 Excel'e Aktar", () => gtExcel('tek')), dugme('gt-word-tek', 'btn-navy', "📄 Word'e Aktar", () => gtWord('tek')));
+      document.getElementById('gt-excel-tek').after(document.getElementById('gt-word-tek'));
+    }
+    if (topluYaz) {
+      topluYaz.after(dugme('gt-excel-hepsi', 'btn-green', "📊 TOPLU EXCEL (her güzergah ayrı sayfa)", () => gtExcel('hepsi')), dugme('gt-word-hepsi', 'btn-navy', "📄 TOPLU WORD (her güzergah ayrı sayfa)", () => gtWord('hepsi')));
+      document.getElementById('gt-excel-hepsi').after(document.getElementById('gt-word-hepsi'));
+    }
+  }
+
+  window.printAllDailySheetsBatch = function () { gtYazdir('hepsi'); };
+  window.exportPuantajWord = puantajWordBirebir;
+  window.gunlukTakipYazdir = gtYazdir;
+  window.gunlukTakipExcel = gtExcel;
+  window.gunlukTakipWord = gtWord;
+  window.__ciktiBirebir = { sayfaModeli, xlsxYap, docxYap, gtHazirla };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dugmeleriKur); else dugmeleriKur();
 })();
 </script>
 </body>
