@@ -1,0 +1,18 @@
+GITHUB'A YÜKLEME (yakcan89-boop/tasima-programi)
+
+A) Depoya (main dalı):
+   1. "kabuk" adında klasör aç ve içine kabuk\ klasöründeki 5 dosyayı yükle
+      (GitHub'da: Add file -> Upload files; sürüklerken klasörüyle birlikte sürükle: kabuk/main.js ... olmalı).
+   2. surum.json dosyasını bununla değiştir.
+   3. program.html AYNI (31.10.2026) — yüklüyse tekrar yüklemene gerek yok.
+   Not: kabuk\ dosyalarını açıp DEĞİŞTİRME; surum.json içindeki doğrulama kodu tutmazsa program güncellemez.
+
+B) Yeni kurulum paketi (Releases -> Draft a new release, etiket v1.1.6):
+   1. D:\TasimaProgrami_1.1.4\TasimaProgrami\resources\app\ içinden şunları SİL:
+      _guncelleme_deneme klasörü, onceki_kabuk klasörü, main_1.1.4_yedek.js, preload_mebbis_1.1.4_yedek.js
+   2. Aynı yerdeki program.html'i bu paketteki program.html (boş genel program, 31.10.2026) ile değiştir.
+   3. TasimaProgrami klasörünü zip'le (adı: TasimaProgrami_1.1.6.zip) ve release'e ekle.
+   (1.-2. adımı ister o zip için ayrı bir kopyada yap; kendi programın çalışmaya devam eder.)
+
+Okullardaki 1.1.4 programları bunu KENDİLİĞİNDEN ALAMAZ: bir kez Okul_Guncelleme_1.1.6 paketindeki
+dosyalar elle konmalı. Ondan sonraki masaüstü güncellemeleri GitHub'dan kendiliğinden gelir.
