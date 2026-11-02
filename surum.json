@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "02.11.2026",
+      "surum": "03.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Günlük takip çizelgesi her zaman tek sayfaya sığar: güzergah/şoför/plaka tek satırda, uzun öğrenci adları kısaltılır."
+      "notlar": "Öğrenci aktarırken seçenekler (Aktif Taşınan, Planlamaya Dahil, İlçe Onayı, Yemek), MEBBİS'e göre ad soyad ile eşleştirme, aday/pasif öğrencilerde toplu sil/aktar. Günlük takip çizelgesi tek sayfaya sığar."
     }
   },
   "kabuk": {
