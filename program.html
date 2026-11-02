@@ -270,7 +270,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 02.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 03.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -1234,6 +1234,14 @@
         <div style="background:#ecfeff; border:2px solid #0e7490; border-radius:6px; padding:10px; margin-bottom:8px;">
           <b style="color:#0e7490; font-size:13px;">📥 İlçe onaylı Excel listesinden ekle</b>
           <div style="font-size:11.5px; color:#155e75; margin:4px 0 8px;">MEB taşıma modülünden indirilen <b>Öğrenci Planlama Listesi</b> (.xlsx) dosyasını seçin. Yalnız <b>T.C., ad soyad, sınıf/şube, okul no ve cinsiyet</b> alınır. "Aktif Taşınan: Hayır" olanlar eklenmez. Programda olan öğrencinin güzergahı ve koltuğu değişmez; yeniler aday listesine (ya da seçtiğiniz güzergaha) eklenir.</div>
+          <div id="ogr-suzgec" style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; background:#fff; border:1px dashed #0e7490; border-radius:5px; padding:5px 9px; margin-bottom:7px; font-size:12px;">
+            <b style="color:#0e7490;">Hangi öğrenciler alınsın?</b>
+            <label><input type="checkbox" data-suz="aktif" onchange="ogrSuzgecDegisti()"> Aktif Taşınan</label>
+            <label><input type="checkbox" data-suz="plan" onchange="ogrSuzgecDegisti()"> Taşıma Planlamasına Dahil Olan</label>
+            <label><input type="checkbox" data-suz="onay" onchange="ogrSuzgecDegisti()"> İlçe Onayı Olan</label>
+            <label><input type="checkbox" data-suz="yemek" onchange="ogrSuzgecDegisti()"> Yemek Planlamasına Dahil Olan</label>
+            <span style="color:#555; font-size:11px;">İşaretli olanların hepsini taşıyan öğrenciler alınır; hiçbiri işaretli değilse listedeki herkes alınır. MEBBİS'ten aktarırken de geçerlidir. ("Formu doldurulmuş" ve "e-Okul dışı" Excel'de yer almadığı için MEBBİS'te Sorgula'dan önce seçilir.)</span>
+          </div>
           <input type="file" id="ara-toplu-dosya" accept=".xlsx" onchange="ilceExcelOku(this.files[0]); this.value='';" style="font-size:12px;">
           <span id="ara-toplu-bilgi" style="font-size:12px; font-weight:bold; margin-left:8px;"></span>
         </div>
@@ -1351,7 +1359,16 @@
         <div style="font-size:11.5px; color:#7a5c00; background:#fff8e1; border:1px solid #f0c36d; border-radius:5px; padding:9px; margin-top:10px;">
           💡 Buradaki öğrenciler <b>hiçbir güzergaha bağlı değildir</b> ve taşınan öğrenci sayısına dahil edilmez. Öğrenci Ara bölümünde <b>ADAY</b> olarak bulunurlar. Sıra geldiğinde aşağıdaki güzergah kutusundan seçip <b>Aktar</b> deyince o güzergahın listesine geçerler.
         </div>
-        <table class="form-grid" style="margin-top:10px;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; background:#fffbeb; border:1px solid #f0c36d; border-radius:5px; padding:7px 9px;">
+          <b style="color:#a16207;">Toplu işlem:</b>
+          <button onclick="adayTopluSec(true)" style="padding:4px 10px; cursor:pointer;">☑ Tümünü seç</button>
+          <button onclick="adayTopluSec(false)" style="padding:4px 10px; cursor:pointer;">☐ Seçimi kaldır</button>
+          <span id="aday-secili-sayi" style="font-weight:bold; color:#a16207;">0 seçili</span>
+          <select id="aday-toplu-hedef" style="width:240px; font-size:11px;"></select>
+          <button onclick="adayTopluAktar()" style="background:#15803d; color:#fff; border:none; border-radius:4px; padding:5px 10px; cursor:pointer; font-weight:bold;">Seçilenleri aktar ▸</button>
+          <button onclick="adayTopluSil()" style="background:#b91c1c; color:#fff; border:none; border-radius:4px; padding:5px 10px; cursor:pointer; font-weight:bold;">🗑 Seçilenleri sil</button>
+        </div>
+        <table class="form-grid" style="margin-top:6px;">
           <thead><tr>
             <th style="width:35px;">S.N.</th>
             <th style="width:75px;">OKUL NO</th>
@@ -2979,7 +2996,7 @@
     candidateStudents.forEach((s, i) => {
       adayParca.push(`
         <tr>
-          <td style="text-align:center; background:#a16207; color:#fff;">${i + 1}</td>
+          <td style="text-align:center; background:#a16207; color:#fff; white-space:nowrap;"><input type="checkbox" class="aday-sec" data-i="${i}" onchange="adaySeciliSay()" style="width:auto; margin:0 3px 0 0;">${i + 1}</td>
           <td><input type="text" value="${s.okulNo || ''}" onchange="candidateStudents[${i}].okulNo=this.value.trim(); saveDataToStorage(); renderStudentSearch();" style="text-align:center; font-weight:bold;"></td>
           <td><input type="text" value="${s.name}" onchange="candidateStudents[${i}].name=formatNameCase(this.value); saveDataToStorage(); renderStudentSearch();"></td>
           <td><input type="text" value="${s.grade || ''}" onchange="candidateStudents[${i}].grade=this.value; saveDataToStorage();"></td>
@@ -3002,7 +3019,33 @@
         </tr>`);
     });
     tbody.innerHTML = adayParca.join('');
+    const th = document.getElementById('aday-toplu-hedef'); if (th) th.innerHTML = secenekler;
+    adaySeciliSay();
     updateAdayCount();
+  }
+  function adaySecilenler() { return [...document.querySelectorAll('#aday-body .aday-sec:checked')].map(k => parseInt(k.dataset.i)).filter(i => !isNaN(i)).sort((a, b) => b - a); }
+  function adaySeciliSay() { const e = document.getElementById('aday-secili-sayi'); if (e) e.textContent = adaySecilenler().length + ' seçili'; }
+  function adayTopluSec(v) { document.querySelectorAll('#aday-body .aday-sec').forEach(k => { k.checked = v; }); adaySeciliSay(); }
+  function adayTopluSil() {
+    const sec = adaySecilenler(); if (!sec.length) { alert('Önce öğrenci seçin.'); return; }
+    if (!confirm(`${sec.length} öğrenci aday / pasif listesinden silinsin mi?\n\nYanlışlıkla silerseniz Öğrenci Ara sayfasındaki "Silinen Kayıtlar" kutusundan geri alabilirsiniz.`)) return;
+    sec.forEach(i => { const o = candidateStudents[i]; if (!o) return; try { silinenKaydet('ogrenci', `${o.name} — aday listesi`, { tip: 'aday', rId: null, ogr: JSON.parse(JSON.stringify(o)), koltuk: '' }); } catch (e) {} candidateStudents.splice(i, 1); });
+    renderAdayList(); try { populateStudentSearchFilters(); } catch (e) {} renderStudentSearch(); saveDataToStorage();
+  }
+  function adayTopluAktar() {
+    const sec = adaySecilenler(); if (!sec.length) { alert('Önce öğrenci seçin.'); return; }
+    const rId = parseInt((document.getElementById('aday-toplu-hedef') || {}).value);
+    const route = routes.find(r => r.id == rId); if (!route) { alert('Güzergah seçin.'); return; }
+    if (!kapasiteUyarisiVer(route, sec.length)) return;
+    if (!confirm(`${sec.length} öğrenci ${guzergahTamAdi(route)} güzergahına aktarılsın mı?`)) return;
+    if (!students[rId]) students[rId] = [];
+    const adlar = [];
+    sec.slice().reverse().forEach(i => { const s = candidateStudents[i]; if (!s) return;
+      const k = { name: s.name, okulNo: s.okulNo || '', grade: s.grade || '', sube: s.sube || '', cinsiyet: s.cinsiyet || '', tc: s.tc || '', ...(s.ozelEgitim ? { ozelEgitim: true } : {}) };
+      students[rId].push(k); try { placeStudentInFirstFreeSeat(route, k); } catch (e) {} adlar.push(s.name); });
+    sec.forEach(i => candidateStudents.splice(i, 1));
+    renderAdayList(); refreshAllRouteViews(); renderStudentSearch(); saveDataToStorage();
+    alert(`${adlar.length} öğrenci ${guzergahTamAdi(route)} güzergahına aktarıldı.`);
   }
 
   function openAdayModal() {
@@ -3209,7 +3252,7 @@
     (candidateStudents || []).forEach(s => { if (s && s.name) h.push({ s, rid: null }); });
     return h;
   }
-  /* T.C. ile, T.C. bulunamazsa öğrenci no ile — ada bakılmaz */
+  /* Eşleştirme sırası: T.C. → öğrenci no → ad soyad (yalnız programdaki T.C. boş/geçersizse). MEBBİS/Excel asıl veridir. */
   function topluBul(k, hepsi) {
     const tc = String(k.tc || '').trim(), no = String(k.okulNo || '').trim();
     if (tc) { const x = hepsi.find(h => String(h.s.tc || '').trim() === tc); if (x) return { x, neden: 'T.C.' }; }
@@ -3221,7 +3264,20 @@
         return { x: null, neden: 'no-celiski', y };
       }
     }
+    // 3. ölçüt: ad soyad (Türkçe harf/büyük-küçük farkı yok sayılır). Yalnız programdaki kaydın T.C.'si yoksa ya da geçersizse;
+    // birden çok aynı adlı varsa sınıf düzeyiyle ayırt edilir, yine tek değilse eşleştirilmez (elle kontrol).
+    const adN = topluAdNorm(k.name);
+    if (adN) {
+      const tcSorunlu = h => { const t = String(h.s.tc || '').replace(/\D/g, ''); return !t || (typeof tcGecerliMi === 'function' && !tcGecerliMi(t)); };
+      let aday = hepsi.filter(h => topluAdNorm(h.s.name) === adN);
+      if (aday.length > 1 && k.grade) { const sv = String(k.grade).match(/\d{1,2}/); const d = aday.filter(h => sv && (String(h.s.grade || '').match(/\d{1,2}/) || [''])[0] === sv[0]); if (d.length) aday = d; }
+      if (aday.length === 1 && tcSorunlu(aday[0])) return { x: aday[0], neden: 'ad soyad' };
+      if (aday.length > 1) return { x: null, neden: 'ad-birden-cok', adet: aday.length };
+    }
     return { x: null, neden: 'yeni' };
+  }
+  function topluAdNorm(ad) {
+    return String(ad || '').replace(/\u0307/g, '').toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ğ/g, 'g').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
   }
   function topluKayit(r) {
     const nrm = sinifNormalle(r.seviye, r.sube);
@@ -3248,12 +3304,13 @@
     if (tekrar >= 0) return { tip: 'hata', html: `<span style="color:#b91c1c;">⚠️ Bu T.C. ${tekrar + 1}. satırda da var</span>` };
     const b = topluBul(k, hepsi);
     if (b.neden === 'no-celiski') return { tip: 'hata', html: `<span style="color:#b45309;">⚠️ Öğrenci no ${k.okulNo} programda <b>${b.y.s.name}</b> (T.C. ${b.y.s.tc}) — T.C. farklı, atlanacak</span>` };
+    if (b.neden === 'ad-birden-cok') return { tip: 'yeni', html: `<b style="color:#1d4ed8;">➕ Yeni öğrenci</b><br><span style="color:#b45309;">⚠️ Programda aynı adlı ${b.adet} öğrenci var, otomatik eşleştirilmedi — kontrol edin</span>` };
     if (b.x) {
       const r0 = b.x.rid ? routes.find(z => String(z.id) === String(b.x.rid)) : null;
       const yer = r0 ? `${r0.no} NOLU` : 'aday listesi';
       const f = topluFark(b.x.s, k);
       if (!f.length) return { tip: 'ayni', html: `<span style="color:#475569;">✔ Kayıtlı (${yer})</span>` };
-      return { tip: 'guncel', bulunan: b.x, fark: f, html: `<b style="color:#15803d;">🔄 Güncellenecek</b> <span style="color:#555;">(${yer})</span><br>` +
+      return { tip: 'guncel', bulunan: b.x, fark: f, html: `<b style="color:#15803d;">🔄 Güncellenecek</b> <span style="color:#555;">(${yer} · ${b.neden} ile eşleşti)</span><br>` +
         f.map(x => `${x[0]}: ${x[1] ? '<s>' + x[1] + '</s> → ' : ''}<b>${x[2]}</b>`).join(' · ') };
     }
     return { tip: 'yeni', html: '<b style="color:#1d4ed8;">➕ Yeni öğrenci</b>' };
@@ -3686,7 +3743,24 @@
     });
     return satirlar;
   }
+  /* Öğrenci aktarma seçenekleri: programın verisinde saklanır (her okul kendi seçimini korur) */
+  let ogrSonExcel = null;
+  function ogrSuzgecOku() {
+    let v = null; try { v = JSON.parse(localStorage.getItem('ogrAktarmaSuzgec') || 'null'); } catch (e) {}
+    return v || { aktif: true, plan: false, onay: false, yemek: false };   // varsayılan: eskisi gibi yalnız aktif taşınanlar
+  }
+  function ogrSuzgecKutulari() {
+    const v = ogrSuzgecOku();
+    document.querySelectorAll('#ogr-suzgec input[data-suz]').forEach(k => { k.checked = !!v[k.dataset.suz]; });
+  }
+  function ogrSuzgecDegisti() {
+    const v = {}; document.querySelectorAll('#ogr-suzgec input[data-suz]').forEach(k => { v[k.dataset.suz] = k.checked; });
+    try { localStorage.setItem('ogrAktarmaSuzgec', JSON.stringify(v)); } catch (e) {}
+    if (ogrSonExcel) ilceExcelOku(ogrSonExcel);
+  }
+  document.addEventListener('DOMContentLoaded', () => { try { ogrSuzgecKutulari(); } catch (e) {} });
   async function ilceExcelOku(dosya) {
+    try { ogrSuzgecKutulari(); } catch (e) {}
     const bilgi = document.getElementById('ara-toplu-bilgi');
     if (!dosya) return;
     let satirlar;
@@ -3703,11 +3777,17 @@
     const bas = satirlar[bi].map(norm);
     const sut = ad => bas.findIndex(h => h === ad || h.includes(ad));
     const iTc = sut('tckimlik'), iAd = sut('öğrenciadı'), iSube = sut('mevcutşube'), iSinif = sut('mevcutsınıf'), iNo = sut('öğrencinumara'), iCins = sut('cinsiyet'), iAktif = sut('aktiftaşınan'), iOzel = sut('özeleğitim');
+    const iPlan = bas.findIndex(h => h === 'planlanan'), iOnay = sut('ilçeonay'), iYemek = bas.findIndex(h => h === 'yemekplanlama');
+    ogrSonExcel = dosya;                                    // seçenek değişince aynı liste yeniden süzülür
+    const suz = ogrSuzgecOku();
+    const evet = v => /^(evet|onayl)/i.test(String(v || '').trim());
+    const kosullar = [['aktif', iAktif, 'Aktif Taşınan'], ['plan', iPlan, 'Taşıma Planlamasına Dahil'], ['onay', iOnay, 'İlçe Onayı'], ['yemek', iYemek, 'Yemek Planlamasına Dahil']].filter(k => suz[k[0]] && k[1] >= 0);
     const kayitlar = [], atlanan = [];
     satirlar.slice(bi + 1).forEach(r => {
       const tc = String(r[iTc] || '').replace(/\D/g, ''); const ad = r[iAd] || '';
       if (!tc && !ad) return;
-      if (iAktif >= 0 && /^hay/i.test(r[iAktif] || '')) { atlanan.push(formatNameCase(ad)); return; }
+      const tutmayan = kosullar.find(k => !evet(r[k[1]]));
+      if (tutmayan) { atlanan.push(formatNameCase(ad) + ' (' + tutmayan[2] + ' değil)'); return; }
       const subeMetin = r[iSube] || '';
       const m = subeMetin.match(/(\d{1,2})\s*\.?\s*S[ıi]n[ıi]f\s*[\/-]?\s*([A-ZÇĞİÖŞÜ])?/i);
       const seviye = m ? m[1] : (r[iSinif] || '').replace(/\D/g, '');
@@ -3720,7 +3800,7 @@
     });
     topluSatirlar = kayitlar.map(k => ({ tc: k.tc, name: k.name, seviye: (String(k.grade || '').match(/\d{1,2}/) || [''])[0], sube: k.sube || '', okulNo: k.okulNo || '', cinsiyet: k.cinsiyet || '', ozelEgitim: k.ozelEgitim, hedef: ADAY_DEGERI }));
     topluTabloCiz();
-    if (bilgi) { bilgi.style.color = '#15803d'; bilgi.innerHTML = `${kayitlar.length} öğrenci okundu` + (atlanan.length ? ` · <span style="color:#b45309;">${atlanan.length} öğrenci "Aktif Taşınan: Hayır" olduğu için alınmadı: ${atlanan.join(', ')}</span>` : '') + '. Tabloyu kontrol edip <b>✅ Ekle / Güncelle</b> deyin.'; }
+    if (bilgi) { bilgi.style.color = '#15803d'; bilgi.innerHTML = `${kayitlar.length} öğrenci okundu` + (atlanan.length ? ` · <span style="color:#b45309;">${atlanan.length} öğrenci seçtiğiniz koşulları taşımadığı için alınmadı: ${atlanan.join(', ')}</span>` : '') + '. Tabloyu kontrol edip <b>✅ Ekle / Güncelle</b> deyin.'; }
     const o = document.getElementById('toplu-tablo-govde'); if (o) o.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -5216,6 +5296,16 @@
     ogr = liste[idx];
     if (!ogr) return;
     const nerede = tip === 'aktif' ? (rota ? rota.name : '') : (tip === 'aday' ? 'aday listesi' : 'mezun / nakil listesi');
+    if (tip === 'aktif') {
+      // Kural: güzergahta kayıtlı öğrenci, güzergahtan çıkarılmadıkça silinmez.
+      if (!confirm(`"${ogr.name}" şu an ${rota ? guzergahTamAdi(rota) : 'bir güzergah'} güzergahında kayıtlı.\n\nGüzergahtaki öğrenci doğrudan silinmez. Önce güzergahtan çıkarılıp ADAY / PASİF listesine alınsın mı?\n(Sonra oradan silebilir ya da başka güzergaha aktarabilirsiniz.)`)) return;
+      if (rota) removeStudentFromSeating(rota, ogr);
+      liste.splice(idx, 1);
+      candidateStudents.push({ name: ogr.name, okulNo: ogr.okulNo || '', grade: ogr.grade || '', sube: ogr.sube || '', cinsiyet: ogr.cinsiyet || '', tc: ogr.tc || '', ...(ogr.ozelEgitim ? { ozelEgitim: true } : {}) });
+      refreshAllRouteViews(); try { renderAdayList(); } catch (e) {}
+      populateStudentSearchFilters(); renderStudentSearch(); saveDataToStorage();
+      return;
+    }
     if (!confirm(`"${ogr.name}" kaydı silinsin mi?\n\nBulunduğu yer: ${nerede}\n\nYanlışlıkla silerseniz bu sayfanın üstündeki "Silinen Kayıtlar" kutusundan geri alabilirsiniz.`)) return;
     let eskiKoltuk = '';
     if (tip === 'aktif' && rota) eskiKoltuk = Object.keys(rota.seatNames || {}).find(k => String(rota.seatNames[k] || '').trim() === String(ogr.name || '').trim()) || '';
