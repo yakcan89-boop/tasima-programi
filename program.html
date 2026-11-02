@@ -270,7 +270,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 03.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 04.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -3451,9 +3451,27 @@
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const hepsi = topluHepsi();
     const okunan = (v.guzergahlar || []).filter(g => !g.okunamadi);
-    const rBul = g => routes.find(r => String(r.no || '').trim() === String(g.guzNo || '').trim())
-                   || routes.find(r => P(r.plate) && P(r.plate) === P(g.plaka));
     const arac = [], yok = [], degis = [], yesilTc = new Set(), gri = new Map(), eslenenRid = new Set();
+    /* Eşleştirme sırası (MEBBİS asıl veri):
+       1) Yaklaşık Maliyet No (bir kez eşleşen güzergaha kaydedilir)  2) güzergah no + ihale türü (Ana İhale / İş Artışı)
+       3) plaka + şoför  4) güzergah adı. Aynı numaralı iki servis (ör. 216 Ana İhale + 216 İş Artışı) asla tek güzergaha birleşmez. */
+    const ihaleTuru = g => /İŞ\s*ARTI|IS\s*ARTI/i.test(g.baslik || '') ? 'İŞ ARTIŞI' : '';
+    const isArtisiMi = r => /İŞ\s*ARTI/i.test(String(r.name || ''));
+    const adEs = (a, b) => B(a).replace(/\s*-\s*/g, '-').replace(/\s*\(İŞ ARTIŞI\)\s*/g, '') === B(b).replace(/\s*-\s*/g, '-');
+    const kullanilan = new Set();
+    const rBul = g => {
+      const bos = r => !kullanilan.has(String(r.id));
+      if (g.maliyet) { const m = routes.find(r => bos(r) && String(r.mebbisMaliyet || '') === String(g.maliyet)); if (m) return { r: m, neden: 'maliyet no' }; }
+      const serbest = routes.filter(r => bos(r) && !r.mebbisMaliyet);
+      let ad = serbest.filter(r => String(r.no || '').trim() === String(g.guzNo || '').trim());
+      if (ad.length) { const t = ihaleTuru(g) === 'İŞ ARTIŞI'; const d = ad.filter(r => isArtisiMi(r) === t); if (d.length) ad = d; else if (t) ad = []; }
+      if (ad.length === 1) return { r: ad[0], neden: 'güzergah no' };
+      const ps = serbest.filter(r => P(r.plate) && P(r.plate) === P(g.plaka) && B(r.driver) === B(g.sofor));
+      if (ps.length === 1) return { r: ps[0], neden: 'plaka + şoför' };
+      const mAd = bolgeAdi(g);
+      if (mAd) { const a = serbest.filter(r => adEs(r.name, mAd)); if (a.length === 1) return { r: a[0], neden: 'güzergah adı' }; }
+      return null;
+    };
     // ⓘ "Taşınan Bölgeler": "… - 84.NOLU GÜZERGAH : YEŞİLYÖRE-ÇÖMEZLER" → "YEŞİLYÖRE-ÇÖMEZLER"
     const bolgeAdi = g => {
       const b = g && g.bolge; if (!b) return '';
@@ -3470,11 +3488,13 @@
     };
     const vakitBul = g => { const sa = parseInt(String(g.alma || '').split(':')[0], 10); return isNaN(sa) ? '' : (sa >= 11 ? 'Öğlen-Akşam' : 'Sabah-Öğlen'); };
     const plakaYaz = p => { const m = P(p).match(/^(\d{2})([A-ZÇĞİÖŞÜ]{1,3})(\d{2,5})$/); return m ? `${m[1]} ${m[2]} ${m[3]}` : String(p || ''); };
+    let maliyetYazildi = false;
     okunan.forEach(g => {
-      let r = rBul(g);
+      const bulunan = rBul(g); let r = bulunan ? bulunan.r : null;
+      if (r) { kullanilan.add(String(r.id)); if (g.maliyet && String(r.mebbisMaliyet || '') !== String(g.maliyet)) { r.mebbisMaliyet = String(g.maliyet); maliyetYazildi = true; } }
       if (!r) {      // programda yok → MEBBİS bilgileriyle oluşturulsun
         // MEBBİS'ten yalnızca güzergah no, plaka, şoför adı ve vakit (öğrenci alma saatinden) alınır
-        r = { id: null, no: String(g.guzNo || ''), name: bolgeAdi(g), driver: formatNameCase(g.sofor || ''), rehberPersonel: '', vakit: vakitBul(g),
+        r = { id: null, no: String(g.guzNo || ''), name: bolgeAdi(g) + (ihaleTuru(g) ? ' (İŞ ARTIŞI)' : ''), mebbisMaliyet: String(g.maliyet || ''), driver: formatNameCase(g.sofor || ''), rehberPersonel: '', vakit: vakitBul(g),
               plate: plakaYaz(g.plaka), tcNo: '', phone: '', modelYear: '', license: '', ekSeferler: [],
               cap: String(Math.min(16, Math.max(14, (g.ogrenciler || []).filter(o => o.durum === 'yesil').length))) };   // kapasite: ilk öğrenci sayısı, en az 14 en fazla 16
         degis.push({ tip: 'guzergah', r, g });
@@ -3482,11 +3502,12 @@
       } else eslenenRid.add(String(r.id));
       const f = [];
       if (r.id === null) { /* yeni güzergah: araç farkı yok */ } else {
-      const mAd = bolgeAdi(g);
-      if (mAd && !String(r.name || '').trim()) degis.push({ tip: 'ad', r, ad: mAd });
-      else if (mAd && B(r.name).replace(/\s*-\s*/g, '-') !== B(mAd).replace(/\s*-\s*/g, '-')) f.push(`Güzergah adı: programda <b>${esc(r.name)}</b>, MEBBİS'te <b>${esc(mAd)}</b>`);
-      if (g.plaka && P(r.plate) !== P(g.plaka)) f.push(`Plaka: programda <b>${esc(r.plate || '—')}</b>, MEBBİS'te <b>${esc(g.plaka)}</b>`);
-      if (g.sofor && B(r.driver) !== B(g.sofor)) f.push(`Şoför: programda <b>${esc(r.driver || '—')}</b>, MEBBİS'te <b>${esc(formatNameCase(g.sofor))}</b>`);
+      const mAd0 = bolgeAdi(g), mAd = mAd0 ? mAd0 + (ihaleTuru(g) ? ' (İŞ ARTIŞI)' : '') : '';
+      if (g.guzNo && String(r.no || '').trim() !== String(g.guzNo).trim()) degis.push({ tip: 'no', r, no: String(g.guzNo).trim(), eski: r.no, tur: ihaleTuru(g) });
+      if (mAd && (!String(r.name || '').trim() || B(r.name).replace(/\s*-\s*/g, '-') !== B(mAd).replace(/\s*-\s*/g, '-'))) degis.push({ tip: 'ad', r, ad: mAd, eski: r.name });
+      if (g.sofor && B(r.driver) !== B(g.sofor)) degis.push({ tip: 'sofor', r, deger: formatNameCase(g.sofor), eski: r.driver, kapali: true });
+      if (g.plaka && P(r.plate) !== P(g.plaka)) degis.push({ tip: 'plaka', r, deger: plakaYaz(g.plaka), eski: r.plate, kapali: true });
+      if (bulunan && bulunan.neden !== 'maliyet no' && bulunan.neden !== 'güzergah no') f.push(`MEBBİS'teki <b>${esc(g.baslik || g.guzNo)}</b> programdaki güzergahla <b>${bulunan.neden}</b> ile eşleştirildi — doğruysa uygulayın`);
       const mv = vakitBul(g);
       if (mv && String(r.vakit || '').trim() && r.vakit !== mv) f.push(`Vakit: programda <b>${esc(r.vakit)}</b>, MEBBİS'te <b>${mv}</b> (öğrenci alma ${esc(g.alma)})`);
       arac.push({ g, r, f });
@@ -3516,15 +3537,23 @@
       mebbisteYok.push({ s, r: routes.find(z => String(z.id) === String(rid)) });
     }));
     mebbisServisSon = { degis };
+    if (maliyetYazildi) { try { saveDataToStorage(); } catch (e) {} }
     const rAd = r => r ? esc(guzergahTamAdi(r)) : 'aday listesi';
     const satir = (d, i) => {
       let t = '';
       if (d.tip === 'tasi') t = `<b>${esc(d.s.name)}</b> (${esc(d.s.grade || d.k.grade)}): ${d.eskiRid ? rAd(routes.find(z => String(z.id) === String(d.eskiRid))) : 'aday listesi'} → <b>${rAd(d.r)}</b>`;
       if (d.tip === 'yeni') t = `<b>${esc(d.k.name)}</b> (${esc(d.k.grade)}) programda yok → <b>${rAd(d.r)}</b> güzergahına eklenecek <span style="color:#b45309">(cinsiyet ve okul no boş kalır)</span>`;
       if (d.tip === 'tc') t = `<b>${esc(d.s.name)}</b>: T.C. kimlik no programa yazılacak`;
-      if (d.tip === 'ad') t = `<b>${esc(d.r.no)} NOLU GÜZERGAH</b>: adı boş → <b>${esc(d.ad)}</b> yazılacak`;
+      if (d.tip === 'ad') t = `<b>${esc(d.r.no)} NOLU GÜZERGAH</b> adı: ${d.eski ? '<s>' + esc(d.eski) + '</s> → ' : ''}<b>${esc(d.ad)}</b> (MEBBİS)`;
+      if (d.tip === 'no') t = `Güzergah no: programda <s>${esc(d.eski || '—')}</s> → MEBBİS'te <b>${esc(d.no)}</b>${d.tur ? ' (' + esc(d.tur) + ')' : ''}`;
+      if (d.tip === 'sofor') t = `<b>${esc(d.r.no)} NOLU</b> şoför: <s>${esc(d.eski || '—')}</s> → <b>${esc(d.deger)}</b> (MEBBİS) <span style="color:#b45309">— geçmiş ayların çıktılarında da değişir; şoför ay içinde değiştiyse Servis Bilgileri'nden ek sefer olarak girin</span>`;
+      if (d.tip === 'plaka') t = `<b>${esc(d.r.no)} NOLU</b> plaka: <s>${esc(d.eski || '—')}</s> → <b>${esc(d.deger)}</b> (MEBBİS) <span style="color:#b45309">— geçmiş ayların çıktılarında da değişir</span>`;
       if (d.tip === 'guzergah') t = `🆕 <b>${esc(d.r.no)} NOLU GÜZERGAH</b> programda yok → oluşturulacak (${d.r.name ? 'Ad: ' + esc(d.r.name) + ', ' : ''}Şoför: ${esc(d.r.driver)}, Plaka: ${esc(d.r.plate)}, Vakit: ${esc(d.r.vakit || '—')}, Kapasite: ${esc(d.r.cap)})`;
-      return `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mds="${i}" checked style="margin-top:3px">${t}</label>`;
+      if (d.tip === 'guzergah') {           // emin olunamadıysa: programdaki boşta kalan bir güzergahla eşleştirme seçeneği
+        const adaylar = routes.filter(z => !kullanilan.has(String(z.id)));
+        if (adaylar.length) t += `<div style="margin-top:4px;font-size:12px">Programda zaten varsa seçin: <select data-mdsg="${i}" style="font-size:12px"><option value="">— Yeni oluştur —</option>${adaylar.map(z => `<option value="${z.id}">${esc(guzergahEtiketi(z))}</option>`).join('')}</select></div>`;
+      }
+      return `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mds="${i}" ${d.kapali ? '' : 'checked'} style="margin-top:3px"><span>${t}</span></label>`;
     };
     const ozet = arac.map(a => {
       const L = (a.g.ogrenciler || []).filter(o => o.durum === 'yesil').length;
@@ -3536,7 +3565,7 @@
     let html = `<div style="font-size:13px;color:#475569;margin-bottom:8px">🌐 MEBBİS Taşıma Servis İşlemleri · ${okunan.length} güzergah okundu · MEBBİS'te hiçbir şey değiştirilmedi.${okulYazildi ? ' · Okul adı yazıldı: <b>' + esc(document.getElementById('okul-adi').value) + '</b>' : ''}</div>
       <table style="border-collapse:collapse;font-size:13px;width:100%;background:#f8fafc"><tr style="background:#e2e8f0"><th></th><th style="padding:4px 8px;text-align:left">Güz.</th><th style="padding:4px 8px;text-align:left">Şoför (MEBBİS)</th><th style="padding:4px 8px;text-align:left">Plaka</th><th style="padding:4px 8px">MEBBİS</th><th style="padding:4px 8px">Program</th></tr>${ozet}</table>`;
     html += bolum('Uygulanacak değişiklikler (işaretliler uygulanır)', degis.map(satir).join(''), '#0e7490');
-    html += bolum('Plaka / şoför / vakit / ad farkları — puantaj bozulmasın diye değiştirilmez, gerekiyorsa Servis Bilgileri\'nden düzeltin',
+    html += bolum('Eşleştirme notları ve vakit farkları',
       arac.filter(a => a.f.length).map(a => `<div style="padding:3px 0"><b>${esc(a.g.guzNo)}:</b> ${a.f.join(' · ')}</div>`).join(''), '#b45309');
     html += bolum('Programda bu güzergahta ama MEBBİS\'te hiçbir araçta yok — silinmez, kontrol edin',
       mebbisteYok.map(m => `<div style="padding:3px 0">• <b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}${String(m.s.tc || '').trim() ? '' : ' <span style="color:#b45309">(programda T.C. yok)</span>'}</div>`).join(''), '#b91c1c');
@@ -3565,6 +3594,14 @@
     if (!confirm(`${secili.length} değişiklik uygulanacak.\n\nMevcut koltuk yerleri korunur; yeri değişen öğrenci yeni aracında boş koltuğa yerleşir. Devam edilsin mi?`)) return;
     const etkilenen = new Set(), sonuc = [];
     secili.filter(d => d.tip === 'guzergah').forEach(d => {
+      const sec = document.querySelector(`#mebbis-servis-modal [data-mdsg="${S.degis.indexOf(d)}"]`);
+      const var_ = sec && sec.value ? routes.find(z => String(z.id) === String(sec.value)) : null;
+      if (var_) {                         // programdaki güzergah MEBBİS servisiyle eşleştirildi: bilgileri MEBBİS'ten alır
+        ['no', 'name', 'mebbisMaliyet'].forEach(k => { if (d.r[k]) var_[k] = d.r[k]; });
+        const yeniR = d.r; S.degis.forEach(e => { if (e.r === yeniR) e.r = var_; });
+        sonuc.push(`${var_.no} NOLU GÜZERGAH MEBBİS ile eşleştirildi (${var_.name || ''})`);
+        return;
+      }
       const id = routes.length ? Math.max(...routes.map(r => Number(r.id) || 0)) + 1 : 1;
       d.r.id = id; routes.push(d.r); students[id] = [];
       try { ensureSeatingData(d.r); } catch (e) {}
@@ -3573,6 +3610,9 @@
     if (typeof guzergahlariSirala === 'function') guzergahlariSirala();
     secili.forEach(d => {
       if (d.tip === 'guzergah') return;
+      if (d.tip === 'no') { sonuc.push(`Güzergah no: ${d.eski || '—'} → ${d.no}`); d.r.no = d.no; return; }
+      if (d.tip === 'sofor') { d.r.driver = d.deger; sonuc.push(`${d.r.no} NOLU şoför: ${d.deger}`); return; }
+      if (d.tip === 'plaka') { d.r.plate = d.deger; sonuc.push(`${d.r.no} NOLU plaka: ${d.deger}`); return; }
       if (d.tip === 'ad') { d.r.name = d.ad; try { if (d.r.seatInfo && !String(d.r.seatInfo.toplamaYeri || '').trim()) d.r.seatInfo.toplamaYeri = d.ad; } catch (e) {} sonuc.push(`${d.r.no} NOLU GÜZERGAH adı: ${d.ad}`); return; }
       if (d.r && d.r.id === null) { sonuc.push(`${(d.s || d.k).name}: güzergahı oluşturulmadığı için atlandı`); return; }
       if (d.tip === 'tc') { d.s.tc = d.k.tc; sonuc.push(`${d.s.name}: T.C. yazıldı`); return; }
