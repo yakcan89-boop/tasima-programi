@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "03.11.2026",
+      "surum": "04.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Öğrenci aktarırken seçenekler (Aktif Taşınan, Planlamaya Dahil, İlçe Onayı, Yemek), MEBBİS'e göre ad soyad ile eşleştirme, aday/pasif öğrencilerde toplu sil/aktar. Günlük takip çizelgesi tek sayfaya sığar."
+      "notlar": "MEBBİS güzergahları artık Yaklaşık Maliyet No ile eşleşir: aynı numaralı Ana İhale ve İş Artışı servisleri karışmaz; güzergah no ve adı MEBBİS'e göre düzeltilir. Öğrenci aktarma seçenekleri ve toplu işlemler. Günlük takip çizelgesi tek sayfa."
     }
   },
   "kabuk": {
