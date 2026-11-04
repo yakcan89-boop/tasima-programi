@@ -292,7 +292,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 06.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 07.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -3667,38 +3667,73 @@
     const m = document.getElementById('mebbis-sofor-modal'); if (m) m.remove();
     alert('Tamamlandı.\n\n' + secili.map(d => `• ${d.t}: ${d.yeni}`).join('\n'));
   }
-  /* MEBBİS e-Personel → Personel Arama: öğretmen adı ve branşı nöbet öğretmenlerine aktarılır */
+  /* MEBBİS e-Personel → Personel Arama: okul adı, müdür / müdür yardımcısı, öğretmen adı-branşı-cinsiyeti */
   let mebbisPersonelSon = null;
   function mebbisPersonelAktar(v) {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const N = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ' ').trim();
-    const bransYaz = s => String(s || '').toLocaleLowerCase('tr-TR').replace(/(^|[\s(\/-])(\S)/g, (m, a, b) => a + b.toLocaleUpperCase('tr-TR'));
-    const L = (v.personel || []).filter(p => !p.durum || /görevde/i.test(p.durum)).map(p => {
+    const bransYaz = s => String(s || '').toLocaleLowerCase('tr-TR').replace(/(^|[\s(\/-])(\S)/g, (m, a, b) => a + b.toLocaleUpperCase('tr-TR')).replace(/ (Ve|İle|Ile) /g, (m, k) => ' ' + k.toLocaleLowerCase('tr-TR') + ' ');
+    const cins = s => /^k/i.test(String(s || '').trim()) ? 'K' : (/^e/i.test(String(s || '').trim()) ? 'E' : '');
+    const P = (v.personel || []).filter(p => !p.durum || /görevde/i.test(p.durum));
+    // okul: MEBBİS'teki görev yeri (en çok geçen)
+    const say = {}; P.forEach(p => { const g = String(p.gorevYeri || '').trim(); if (g) say[g] = (say[g] || 0) + 1; });
+    const mebOkul = Object.keys(say).sort((a, b) => say[b] - say[a])[0] || '';
+    const okulBul = ad => nobetOkullari.find(o => N(o.ad) === N(ad)) || nobetOkullari.find(o => N(o.ad).includes(N(ad)) || N(ad).includes(N(o.ad)));
+    const mevcutOkul = mebOkul ? okulBul(mebOkul) : null;
+    const okulAd = mevcutOkul ? mevcutOkul.ad : (mebOkul ? N(mebOkul) : bizimOkulAdi());
+    const islem = [];   // {tur, metin, uygula()}
+    if (mebOkul && !mevcutOkul) islem.push({ metin: `Okul listesine ekle: <b>${esc(okulAd)}</b>`, uygula: () => { if (!okulBul(okulAd)) nobetOkullari.push({ ad: okulAd, mdrYard: '', mudur: '', bizim: nobetOkullari.length === 0 }); } });
+    const okulAdiEl = document.getElementById('okul-adi');
+    const okulAdiDeger = okulAdiEl ? okulAdiEl.value.trim() : '';
+    if (mebOkul && okulAdiEl && !okulAdiDeger) islem.push({ metin: `Ana sayfa Merkez Okul Adı: <b>${esc(N(mebOkul))}</b>`, uygula: () => { okulAdiEl.value = N(mebOkul); } });
+    const okulNot = (mebOkul && okulAdiDeger && N(okulAdiDeger) !== N(mebOkul)) ? `Ana sayfadaki okul adı (${esc(okulAdiDeger)}) MEBBİS'tekinden (${esc(mebOkul)}) farklı — değiştirilmedi.` : '';
+    const idareci = P.filter(p => /müdür/i.test(p.gorev || '')).map(p => ({ ad: formatNameCase(`${p.ad} ${p.soyad}`), gorev: /yard/i.test(p.gorev) ? 'Müdür Yardımcısı' : (/vekil/i.test(p.gorev) ? 'Müdür Vekili' : 'Okul Müdürü') }));
+    const mudur = idareci.find(x => x.gorev !== 'Müdür Yardımcısı'), yard = idareci.find(x => x.gorev === 'Müdür Yardımcısı');
+    const kutu = (id, yeni, etiket) => { const el = document.getElementById(id); if (!el || !yeni || N(el.value) === N(yeni)) return; islem.push({ metin: `Ana sayfa ${etiket}: ${el.value.trim() ? '<s>' + esc(el.value) + '</s> → ' : ''}<b>${esc(yeni)}</b>`, uygula: () => { el.value = yeni; } }); };
+    if (mudur) kutu('okul-mudur', mudur.ad, 'Okul Müdürü');
+    if (yard) kutu('mdr-yard', yard.ad, 'Mdr. Yrd.');
+    idareci.forEach(x => {
+      const var_ = nobetIdarecileri.find(k => N(k.name) === N(x.ad));
+      if (!var_) islem.push({ metin: `İdarecilere (imza) ekle: <b>${esc(x.ad)}</b> — ${esc(x.gorev)}`, uygula: () => { if (!nobetIdarecileri.some(k => N(k.name) === N(x.ad))) nobetIdarecileri.push({ name: x.ad, gorev: x.gorev, okul: okulAd, imza: true }); } });
+      else if (var_.gorev !== x.gorev) islem.push({ metin: `İdareci görevi: <b>${esc(x.ad)}</b> ${esc(var_.gorev)} → <b>${esc(x.gorev)}</b>`, uygula: () => { var_.gorev = x.gorev; } });
+    });
+    if (mevcutOkul || mebOkul) {
+      const o = () => okulBul(okulAd);
+      if (mudur) islem.push({ gizli: true, uygula: () => { const x = o(); if (x) x.mudur = mudur.ad; } });
+      if (yard) islem.push({ gizli: true, uygula: () => { const x = o(); if (x) x.mdrYard = yard.ad; } });
+    }
+    const L = P.map(p => {
       const ad = formatNameCase(`${p.ad} ${p.soyad}`);
-      const idareci = /müdür/i.test(p.gorev || '');
+      const idr = /müdür/i.test(p.gorev || '');
       const ogretmen = /öğretmen/i.test(p.gorev || '') || /öğretmen/i.test(p.unvan || '');
       const mevcut = nobetOgretmenleri.findIndex(t => N(t.name) === N(ad));
-      return { ad, brans: bransYaz(p.brans), gorev: p.gorev || '', idareci, ogretmen, mevcut };
+      const c = cins(p.cinsiyet), b = bransYaz(p.brans);
+      const t = mevcut >= 0 ? nobetOgretmenleri[mevcut] : null;
+      const fark = t ? [t.brans !== b && b ? 'branş' : '', c && ogretmenCinsiyeti(t) !== c ? 'cinsiyet' : '', okulAd && t.okul !== okulAd && !okulBul(t.okul || '') ? 'okul' : ''].filter(Boolean) : [];
+      return { ad, brans: b, cinsiyet: c, gorev: p.gorev || '', idareci: idr, ogretmen, mevcut, fark };
     });
-    mebbisPersonelSon = L;
-    const okulSec = nobetOkullari.length ? `<select id="mper-okul" style="font-size:12px">${nobetOkullari.map(o => `<option value="${esc(o.ad)}" ${o.ad === bizimOkulAdi() ? 'selected' : ''}>${esc(o.ad)}</option>`).join('')}</select>` : '';
+    mebbisPersonelSon = { L, islem, okulAd };
     const satir = (x, i) => {
-      const durum = x.mevcut >= 0 ? (nobetOgretmenleri[x.mevcut].brans === x.brans ? '<span style="color:#065f46">listede var</span>' : '<span style="color:#0e7490">listede var · branş eklenecek</span>') : '<b style="color:#15803d">yeni eklenecek</b>';
-      const isaret = x.mevcut >= 0 ? nobetOgretmenleri[x.mevcut].brans !== x.brans : (x.ogretmen && !x.idareci);
-      return `<label style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mper="${i}" ${isaret ? 'checked' : ''}><span style="flex:1"><b>${esc(x.ad)}</b> <span style="color:#64748b">${esc(x.brans)}</span>${x.idareci ? ` <span style="color:#b45309">(${esc(x.gorev)})</span>` : ''}</span><span style="font-size:12px">${durum}</span></label>`;
+      const durum = x.mevcut >= 0 ? (x.fark.length ? `<span style="color:#0e7490">listede var · ${x.fark.join(', ')} güncellenecek</span>` : '<span style="color:#065f46">listede var</span>') : '<b style="color:#15803d">yeni eklenecek</b>';
+      const isaret = x.mevcut >= 0 ? x.fark.length > 0 : (x.ogretmen && !x.idareci);
+      return `<label style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mper="${i}" ${isaret ? 'checked' : ''}><span style="flex:1"><b>${esc(x.ad)}</b> <span style="color:#64748b">${esc(x.brans)}${x.cinsiyet ? ' · ' + x.cinsiyet : ''}</span>${x.idareci ? ` <span style="color:#b45309">(${esc(x.gorev)} — nöbete de yazılacaksa işaretleyin)</span>` : ''}</span><span style="font-size:12px">${durum}</span></label>`;
     };
     const mebAd = new Set(L.map(x => N(x.ad)));
-    const yok = nobetOgretmenleri.filter(t => (t.okul || '') === bizimOkulAdi() && !mebAd.has(N(t.name)));
+    const yok = nobetOgretmenleri.filter(t => (t.okul || '') === okulAd && !mebAd.has(N(t.name)));
+    const gorunen = islem.map((x, i) => ({ x, i })).filter(z => !z.x.gizli);
     let m = document.getElementById('mebbis-personel-modal'); if (m) m.remove();
     m = document.createElement('div'); m.id = 'mebbis-personel-modal';
     m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
-    m.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35)">
-      <div style="padding:12px 18px;background:#15803d;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">👩‍🏫 MEBBİS Personel → Nöbet Öğretmenleri</div>
+    m.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <div style="padding:12px 18px;background:#15803d;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">👩‍🏫 MEBBİS Personel → Program</div>
       <div style="padding:12px 18px;overflow:auto;font-size:13px">
-        <div style="color:#475569;margin-bottom:8px">MEBBİS'ten ${L.length} görevde personel okundu. Yalnız ad soyad ve branş alınır. İdareciler işaretsiz gelir (isterseniz işaretleyin). MEBBİS'te hiçbir şey değişmez.</div>
-        ${okulSec ? `<div style="margin-bottom:8px">Yeni eklenenlerin okulu: ${okulSec}</div>` : ''}
+        <div style="color:#475569;margin-bottom:8px">MEBBİS'ten ${P.length} görevde personel okundu${mebOkul ? ` (${esc(mebOkul)})` : ''}. Ad soyad, branş, cinsiyet, görev ve okul alınır. Yanlış olanın işaretini kaldırın. MEBBİS'te hiçbir şey değişmez.</div>
+        ${gorunen.length || okulNot ? `<div style="font-weight:700;color:#0f766e;margin:6px 0 4px">🏫 Okul ve idareciler</div>` : ''}
+        ${gorunen.map(({ x, i }) => `<label style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mpi="${i}" checked><span>${x.metin}</span></label>`).join('')}
+        ${okulNot ? `<div style="color:#b45309;font-size:12.5px;padding:4px 0">${okulNot}</div>` : ''}
+        <div style="font-weight:700;color:#0f766e;margin:10px 0 4px">👩‍🏫 Nöbet öğretmenleri <span style="font-weight:normal;color:#64748b">(okulu: ${esc(okulAd)})</span></div>
         ${L.map(satir).join('')}
-        ${yok.length ? `<div style="margin-top:10px;color:#b45309;font-size:12.5px"><b>Programda olup MEBBİS listesinde olmayan (${esc(bizimOkulAdi())}):</b> ${yok.map(t => esc(t.name)).join(', ')} — silinmedi; ayrıldıysa Pasif yapın ya da silin.</div>` : ''}
+        ${yok.length ? `<div style="margin-top:10px;color:#b45309;font-size:12.5px"><b>Programda olup MEBBİS listesinde olmayan:</b> ${yok.map(t => esc(t.name)).join(', ')} — silinmedi; ayrıldıysa Pasif yapın ya da silin.</div>` : ''}
       </div>
       <div style="padding:10px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
         <button type="button" onclick="mebbisPersonelUygula()" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Aktar</button>
@@ -3706,20 +3741,29 @@
     document.body.appendChild(m);
   }
   function mebbisPersonelUygula() {
-    const L = mebbisPersonelSon; if (!L) return;
-    const secili = [...document.querySelectorAll('#mebbis-personel-modal [data-mper]')].filter(c => c.checked).map(c => L[+c.getAttribute('data-mper')]);
-    if (!secili.length) { alert('Hiç kimse seçilmedi.'); return; }
-    const okulEl = document.getElementById('mper-okul');
-    const okul = (okulEl && okulEl.value) || bizimOkulAdi() || (nobetOkullari[0] && nobetOkullari[0].ad) || '';
+    const S = mebbisPersonelSon; if (!S) return;
+    const kutular = [...document.querySelectorAll('#mebbis-personel-modal [data-mpi]')];
+    const secIslem = kutular.filter(c => c.checked).map(c => S.islem[+c.getAttribute('data-mpi')]);
+    const secili = [...document.querySelectorAll('#mebbis-personel-modal [data-mper]')].filter(c => c.checked).map(c => S.L[+c.getAttribute('data-mper')]);
+    if (!secIslem.length && !secili.length) { alert('Hiçbir şey seçilmedi.'); return; }
+    secIslem.forEach(x => x.uygula());
+    S.islem.filter(x => x.gizli).forEach(x => x.uygula());
+    const okul = S.okulAd || bizimOkulAdi() || (nobetOkullari[0] && nobetOkullari[0].ad) || '';
     const eklenen = [], guncellenen = [];
     secili.forEach(x => {
-      if (x.mevcut >= 0) { nobetOgretmenleri[x.mevcut].brans = x.brans; guncellenen.push(x.ad); }
-      else { nobetOgretmenleri.push({ name: x.ad, brans: x.brans, okul, aktif: true, devir: 0, gunler: { mon: true, tue: true, wed: true, thu: true, fri: true }, sabitYer: '', servisYok: {}, cinsiyet: '' }); eklenen.push(x.ad); }
+      if (x.mevcut >= 0) {
+        const t = nobetOgretmenleri[x.mevcut];
+        if (x.brans) t.brans = x.brans;
+        if (x.cinsiyet) t.cinsiyet = x.cinsiyet;
+        if (x.fark.includes('okul')) t.okul = okul;
+        guncellenen.push(x.ad);
+      } else { nobetOgretmenleri.push({ name: x.ad, brans: x.brans, okul, aktif: true, devir: 0, gunler: { mon: true, tue: true, wed: true, thu: true, fri: true }, sabitYer: '', servisYok: {}, cinsiyet: x.cinsiyet || '' }); eklenen.push(x.ad); }
     });
+    if (typeof updateDashboardStats === 'function') updateDashboardStats();
     renderNobetPaneli();
     saveDataToStorage();
     const m = document.getElementById('mebbis-personel-modal'); if (m) m.remove();
-    alert(`Tamamlandı.\n\nEklenen (${eklenen.length}): ${eklenen.join(', ') || '—'}\nBranşı güncellenen (${guncellenen.length}): ${guncellenen.join(', ') || '—'}\n\nYeni eklenenlerin okulda olduğu günlerini, sabit nöbet yerini ve cinsiyetini Okul Nöbeti → Tanımlar'dan ayarlayın.`);
+    alert(`Tamamlandı.\n\nOkul / idareci: ${secIslem.length} işlem\nEklenen öğretmen (${eklenen.length}): ${eklenen.join(', ') || '—'}\nGüncellenen öğretmen (${guncellenen.length}): ${guncellenen.join(', ') || '—'}\n\nYeni eklenenlerin okulda olduğu günlerini ve sabit nöbet yerini Okul Nöbeti → Tanımlar'dan ayarlayın.`);
   }
   function mebbisServisUygula() {
     const S = mebbisServisSon; if (!S) return;
