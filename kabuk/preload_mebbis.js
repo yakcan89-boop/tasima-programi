@@ -20,6 +20,7 @@ function adim() {
   const t = sayfaMetni();
   if (/ogrenci listesi indir|kaydi bulunan ogrenci sayisi/.test(t)) return 'ogr-hazir';
   if (/nolu guzergah/.test(t) && /arac plakasi/.test(t)) return 'srv-hazir';
+  if (/ets01010/.test(t) && document.querySelector('a[id$="_btnArac"]')) return 'sofor-hazir';
   if (/ets07004/.test(t)) return 'ogr-sorgula';
   if (/ets01025/.test(t)) return 'srv-sorgula';
   if (/ilkokul-orta okul tasima islemleri|orta ogretim tasima islemleri|diger tasima islemleri/.test(t)) return 'modul';
@@ -32,6 +33,7 @@ const METIN = {
           '<b>Güzergah ve servis öğrencileri için:</b> İlkokul-Orta Okul (lisede: Orta Öğretim) Taşıma İşlemleri → <b>Taşıma Servis İşlemleri</b>'],
   'ogr-sorgula': ['<b>Sorgula</b>\'ya basın ve öğrenci listesinin gelmesini bekleyin.'],
   'ogr-hazir': ['Liste geldi. Aşağıdaki <b>Öğrencileri Programa Aktar</b> düğmesine basın.', 'Program kendiliğinden açılır; yeni ve değişen öğrencileri gösterir, siz onaylayınca kaydeder.'],
+  'sofor-hazir': ['Araçlar geldi. Aşağıdaki <b>Şoför Bilgilerini Programa Aktar</b> düğmesine basın.', 'Telefon, şoför, plaka ve saatler programla karşılaştırılır; siz onaylayınca kaydedilir. MEBBİS\'te hiçbir şey değişmez.'],
   'srv-sorgula': ['<b>Sorgula</b>\'ya basın ve güzergahların gelmesini bekleyin.'],
   'srv-hazir': ['Güzergahlar geldi. Aşağıdaki <b>Güzergahları Programa Aktar</b> düğmesine basın.', 'Her güzergahın penceresi sırayla açılıp kapanır, bitene kadar dokunmayın. MEBBİS\'te hiçbir şey değişmez.'],
   pencere: ['Bir güzergahın öğrenci penceresi açık. <b>Bu güzergahı programla karşılaştır</b> düğmesine basın.', 'Farklar ve çakışmalar programda listelenir. Seçtikleriniz için program buradaki ✔ işaretlerini ayarlar; <b>kaydet\'e siz basarsınız</b>.'],
@@ -63,7 +65,8 @@ function kur() {
       ${a === 'pencere' ? dugme('__tasima_tek', '⚖️ Bu güzergahı programla karşılaştır', '#b45309', true) : ''}
       ${dugme('__tasima_ogr', '📥 Öğrencileri Programa Aktar', '#0e7490', a === 'ogr-hazir')}
       ${dugme('__tasima_aktar', '🚌 Güzergahları Programa Aktar', '#1d4ed8', a === 'srv-hazir')}
-      <div style="margin-top:8px;color:#64748b;font-size:11px">Düğmeler üst menüde de var: MEBBİS → … (Ctrl+Shift+O / Ctrl+Shift+G)</div>
+      ${a === 'sofor-hazir' ? dugme('__tasima_sofor', '📞 Şoför Bilgilerini Programa Aktar', '#7c3aed', true) : ''}
+      <div style="margin-top:8px;color:#64748b;font-size:11px">Düğmeler üst menüde de var: MEBBİS → … (Ctrl+Shift+O / Ctrl+Shift+G / Ctrl+Shift+F)</div>
     </div>`;
   document.body.appendChild(p);
   p.querySelector('#__tr_bas').onclick = () => { window[KAPALI] = true; kur(); };
@@ -71,6 +74,8 @@ function kur() {
   if (tek) tek.onclick = ev => { ev.preventDefault(); tek.disabled = true; tek.textContent = '⏳ Okunuyor…'; ipcRenderer.send('mebbis-tek-karsilastir'); setTimeout(() => { tek.disabled = false; tek.textContent = tek.getAttribute('data-etiket'); }, 5000); };
   ogr.onclick = ev => { ev.preventDefault(); ogr.disabled = true; ogr.textContent = '⏳ Liste alınıyor…'; ipcRenderer.send('mebbis-rehber-ogrenci');
     setTimeout(() => { ogr.disabled = false; ogr.textContent = ogr.getAttribute('data-etiket'); }, 8000); };
+  const sf = p.querySelector('#__tasima_sofor');
+  if (sf) sf.onclick = ev => { ev.preventDefault(); sf.disabled = true; sf.textContent = '⏳ Okunuyor…'; ipcRenderer.send('mebbis-sofor-aktar'); setTimeout(() => { sf.disabled = false; sf.textContent = sf.getAttribute('data-etiket'); }, 4000); };
   srv.onclick = ev => { ev.preventDefault(); srv.disabled = true; srv.textContent = '⏳ Güzergahlar okunuyor…'; ipcRenderer.send('mebbis-rehber-servis'); };
 }
 if (MEBBIS_SAYFASI && window.top === window) window.addEventListener('DOMContentLoaded', () => {
