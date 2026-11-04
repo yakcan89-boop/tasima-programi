@@ -243,6 +243,28 @@
     @page { size: auto; margin: 4mm; }
   }
 </style>
+<script>
+/* Masaüstü programında "Yükle / Dosya seç" pencereleri Belgeler\Taşıma Programı\İndirilenler klasöründe açılır */
+(function () {
+  const asil = HTMLInputElement.prototype.click;
+  HTMLInputElement.prototype.click = function () {
+    if (this.type !== 'file' || !window.masaustu || !window.masaustu.dosyaSec) return asil.call(this);
+    let L = null;
+    try { L = window.masaustu.dosyaSec({ accept: this.accept || '', multiple: !!this.multiple }); } catch (e) { L = null; }
+    if (L === null) return asil.call(this);
+    if (!L.length) return;
+    const dt = new DataTransfer();
+    L.forEach(x => dt.items.add(new File([x.veri], x.ad, { type: x.tur || '', lastModified: x.zaman || Date.now() })));
+    this.files = dt.files;
+    this.dispatchEvent(new Event('input', { bubbles: true }));
+    this.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  document.addEventListener('click', ev => {
+    const el = ev.target;
+    if (ev.isTrusted && el instanceof HTMLInputElement && el.type === 'file' && window.masaustu && window.masaustu.dosyaSec) { ev.preventDefault(); el.click(); }
+  }, true);
+})();
+</script>
 </head>
 <body>
 
