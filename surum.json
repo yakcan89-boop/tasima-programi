@@ -2,18 +2,18 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "04.11.2026",
+      "surum": "05.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "MEBBİS güzergahları artık Yaklaşık Maliyet No ile eşleşir: aynı numaralı Ana İhale ve İş Artışı servisleri karışmaz; güzergah no ve adı MEBBİS'e göre düzeltilir. Öğrenci aktarma seçenekleri ve toplu işlemler. Günlük takip çizelgesi tek sayfa."
+      "notlar": "MEBBİS'e öğrenci yerleştirmeyi program kaydeder (araç kapasitesi aşılmaz, kayıttan sonra kontrol edilir). MEBBİS Şoför Puantaj sayfasından şoför telefonu, plaka ve saatler alınır; şoför/plaka değişikliği bu aydan geçerli olur, geçmiş aylar değişmez."
     }
   },
   "kabuk": {
-    "surum": "1.1.7",
-    "notlar": "Taşıma Programı rehber paneli artık Taşımalı Öğrenci Modülü penceresinde açılıyor; küçültülünce köşede düğme olarak kalıyor.",
+    "surum": "1.1.8",
+    "notlar": "Program MEBBİS'e öğrenci yerleştirmeyi kaydeder (önce çıkarır, sonra ekler, araç kapasitesini aşmaz, kayıttan sonra kontrol eder). Şoför puantaj sayfasından telefon, şoför, plaka ve saatler alınır.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "5cbc1c04e49c5a6e9dec4699ab8101edf8fe9349c5e51e1b8e8474d012ad8191"
+        "sha256": "5d48c0546177b3fa9dfd414aa617db319e7879703e3972a555269ded5df5ad27"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
@@ -21,7 +21,7 @@
       },
       "preload_mebbis.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload_mebbis.js",
-        "sha256": "8dd4cbb04d735c5151b30c90af7f76c6298138e79453c32441ad8eb829c7b425"
+        "sha256": "ef809a83c3108df89e0f8ee08a9e94c2c15b558d7d085deedd5d400486100f9d"
       },
       "onizle.html": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/onizle.html",
