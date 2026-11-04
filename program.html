@@ -2187,6 +2187,21 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    // Programa eklenmiş diğer okullar varsa onların yedeği de ayrı dosya olarak iner
+    try {
+      const asc = t => t.replace(/[ğĞüÜşŞıİöÖçÇ]/g, c => ({ ğ: 'g', Ğ: 'G', ü: 'u', Ü: 'U', ş: 's', Ş: 'S', ı: 'i', İ: 'I', ö: 'o', Ö: 'O', ç: 'c', Ç: 'C' }[c])).replace(/[^\x20-\x7E]/g, '');
+      const d = new Date(), p = n => String(n).padStart(2, '0');
+      okulListesi().filter(o => o.id !== AKTIF_OKUL).forEach((o, i) => {
+        const anahtar = VERI_TABANI + (o.id ? '__' + o.id : ''); const ham = localStorage.getItem(anahtar); if (!ham) return;
+        let veri; try { veri = JSON.parse(ham); } catch (e) { return; }
+        const ad = String(veri.okulAdi || o.ad || 'Okul').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Okul';
+        setTimeout(() => {
+          const b = new Blob([JSON.stringify(veri, null, 2)], { type: 'application/json' }), u = URL.createObjectURL(b), x = document.createElement('a');
+          x.href = u; x.download = asc(`${ad} - Yedek - ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}.${p(d.getMinutes())}.json`);
+          document.body.appendChild(x); x.click(); x.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000);
+        }, 700 * (i + 1));
+      });
+    } catch (e) {}
   }
 
   function importBackup(file) {
@@ -2210,6 +2225,9 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           data = sec.o;
         }
         if (!data || !Array.isArray(data.routes)) throw new Error('Geçersiz yedek');
+        const B = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ' ').trim();
+        const acik = (document.getElementById('okul-adi') || {}).value || '';
+        if (data.okulAdi && acik && B(data.okulAdi) !== B(acik) && !confirm('Bu yedek "' + data.okulAdi + '" okuluna ait.\nŞu an açık olan okul: "' + acik + '".\n\nYedek AÇIK OLAN OKULUN yerine yüklenecek. Doğru okulu açtığınızdan emin misiniz?\n(Başka okulun yedeğiyse Vazgeç deyin, soldaki okul kutusundan o okula geçip tekrar yükleyin.)')) { document.getElementById('backup-file-input').value = ''; return; }
         localStorage.setItem(VERI_ANAHTARI, JSON.stringify(data));
         alert("Yedek başarıyla yüklendi. Sayfa yenileniyor...");
         location.reload();
@@ -3763,6 +3781,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         guncellenen.push(x.ad);
       } else { nobetOgretmenleri.push({ name: x.ad, brans: x.brans, okul, aktif: true, devir: 0, gunler: { mon: true, tue: true, wed: true, thu: true, fri: true }, sabitYer: '', servisYok: {}, cinsiyet: x.cinsiyet || '' }); eklenen.push(x.ad); }
     });
+    try { nobetOkulTekrarBirlestir(); } catch (e) {}
     if (typeof updateDashboardStats === 'function') updateDashboardStats();
     renderNobetPaneli();
     saveDataToStorage();
@@ -12391,6 +12410,10 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       const sabitTgl = document.getElementById('ilkokul-sabit-toggle');
       if (sabitTgl) { sabitTgl.checked = ilkokulSabitAktif; }
       sabitGunGoster();
+      try {
+        const bir = nobetOkulTekrarBirlestir();
+        if (bir.length) { saveDataToStorage(); setTimeout(() => alert('Nöbet okullarında aynı okul iki kez kayıtlıydı, birleştirildi:\n\n' + bir.join('\n') + '\n\nÖğretmenler, idareciler ve servis sütunu korunarak tek okulda toplandı.'), 800); }
+      } catch (e) {}
       const sabitKutu = document.getElementById('ilkokul-sabit-kutu');
       if (sabitKutu) sabitKutu.style.opacity = ilkokulSabitAktif ? '1' : '0.45';
       const sabitBilgi = document.getElementById('ilkokul-sabit-durum');
