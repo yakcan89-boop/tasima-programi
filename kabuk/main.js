@@ -22,12 +22,13 @@ const yollar = () => ({
   progHtml: path.join(kok(), 'Program', 'program.html'),
   progOnceki: path.join(kok(), 'Program', 'program_onceki.html'),
   ayar: path.join(kok(), 'ayarlar.json'),
-  kaynak: path.join(kok(), 'Veri Kaynağı')
+  kaynak: path.join(kok(), 'Veri Kaynağı'),
+  indir: path.join(kok(), 'İndirilenler')
 });
 
 function klasorleriHazirla() {
   const y = yollar();
-  [y.kok, y.yedek, y.prog, y.kaynak].forEach(k => fs.mkdirSync(k, { recursive: true }));
+  [y.kok, y.yedek, y.prog, y.kaynak, y.indir].forEach(k => fs.mkdirSync(k, { recursive: true }));
   const oku = path.join(y.kaynak, 'OKU-BENI.txt');
   if (!fs.existsSync(oku)) try { fs.writeFileSync(oku, 'VERİ KAYNAĞI\r\n\r\nBu klasör normalde boş kalır.\r\nİçine okul bilgileri olan bir program dosyası (.html) ya da yedek dosyası (.json) koyarsanız,\r\n"Dosya → Veri kaynağından yükle" ya da "Verileri Sıfırla" dendiğinde okulun bilgileri bu dosyadan alınır.\r\nProgramın kendisi her zaman güncel sürüm olarak kalır.\r\nYüklemeden önce mevcut bilgiler Yedekler klasörüne kaydedilir.\r\n', 'utf8'); } catch (e) {}
   if (!fs.existsSync(y.progHtml)) fs.copyFileSync(path.join(__dirname, DENEME ? 'program_bos.html' : 'program.html'), y.progHtml);
@@ -179,7 +180,7 @@ async function verileriCek() {
     });
     if (r.response !== 0) return;
   }
-  const s = await dialog.showOpenDialog(anaPencere, { title: 'Yedek dosyasını seçin', filters: [{ name: 'Yedek', extensions: ['json'] }], properties: ['openFile'] });
+  const s = await dialog.showOpenDialog(anaPencere, { title: 'Yedek dosyasını seçin', defaultPath: yollar().indir, filters: [{ name: 'Yedek', extensions: ['json'] }], properties: ['openFile'] });
   if (!s.canceled && s.filePaths[0]) yedekYukle(s.filePaths[0]);
 }
 
@@ -977,7 +978,7 @@ function disYedekHatirlat() {
 }
 async function yedekAl() {
   try { await anaPencere.webContents.executeJavaScript('window.__masaustuKaydet && window.__masaustuKaydet()'); } catch (e) {}
-  const s = await dialog.showSaveDialog(anaPencere, { title: 'Yedeği kaydet', defaultPath: path.join(app.getPath('documents'), yedekAdi('Tüm veriler')), filters: [{ name: 'Yedek', extensions: ['json'] }] });
+  const s = await dialog.showSaveDialog(anaPencere, { title: 'Yedeği kaydet', defaultPath: path.join(yollar().indir, yedekAdi('Tüm veriler')), filters: [{ name: 'Yedek', extensions: ['json'] }] });
   if (s.canceled || !s.filePath) return;
   fs.copyFileSync(yollar().veri, s.filePath);
   const ay = ayarOku(); ay.sonDisYedek = Date.now(); ayarYaz(ay);
@@ -1090,6 +1091,7 @@ function menuKur() {
       { label: 'Yedekten geri yükle…', click: tumYedektenDon },
       { label: 'Veri kaynağından yükle…', click: veriKaynagindanYukle },
       { label: 'Veri klasörünü aç', click: () => shell.openPath(yollar().kok) },
+      { label: 'İndirilenler klasörünü aç (yedek, nöbet, Excel…)', click: () => { fs.mkdirSync(yollar().indir, { recursive: true }); shell.openPath(yollar().indir); } },
       { label: 'Veri Kaynağı klasörünü aç', click: () => { fs.mkdirSync(yollar().kaynak, { recursive: true }); shell.openPath(yollar().kaynak); } },
       { type: 'separator' },
       { label: 'Yazdır', accelerator: 'CmdOrCtrl+P', click: () => anaPencere.webContents.executeJavaScript('window.print()') },
@@ -1110,6 +1112,7 @@ function menuKur() {
       { label: "Öğrenci listesini programa aktar (Öğrenci Planlama sayfası)", accelerator: 'CmdOrCtrl+Shift+O', click: menudenOgrenci },
       { label: "Güzergahları programa aktar (Taşıma Servis İşlemleri sayfası)", accelerator: 'CmdOrCtrl+Shift+G', click: menudenServis },
       { label: "Şoför bilgilerini programa aktar (Taşıma Araç Şoför Puantaj sayfası)", accelerator: 'CmdOrCtrl+Shift+F', click: (i, w) => mebbisSoforOku(w) },
+      { label: "Öğretmenleri programa aktar (e-Personel → Personel Arama sayfası)", accelerator: 'CmdOrCtrl+Shift+P', click: (i, w) => mebbisPersonelOku(w) },
       { type: 'separator' },
       { label: 'MEBBİS sayfasını kaydet (sorun bildirmek için)', click: mebbisSayfaKaydet },
       { type: 'separator' },
