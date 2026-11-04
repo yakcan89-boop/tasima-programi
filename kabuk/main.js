@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.7';
+const KABUK_SURUM = '1.1.8';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -650,6 +650,26 @@ async function mebbisServisOku(e) {
 const __plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, '');
 
 ipcMain.on('mebbis-aktar', e => mebbisOgrenciAktar(e));
+/* Taşıma Araç Şoför Puantaj İşlemleri (ETS01010): her araç satırı "plaka / şoför / telefon / alma - okuldan alma" ve title = maliyet no */
+const SOFOR_OKU_JS = `(() => [...document.querySelectorAll('a[id$="_btnArac"]')].map(a => {
+  const p = (a.innerHTML || '').split(/<br\\s*\\/?>/i).map(x => x.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim());
+  const s = (p[3] || '').match(/(\\d{1,2}:\\d{2})\\s*-\\s*(\\d{1,2}:\\d{2})/) || [];
+  return { maliyet: a.title || '', plaka: p[0] || '', sofor: p[1] || '', telefon: p[2] || '', alma: s[1] || '', birak: s[2] || '' };
+}).filter(x => x.plaka || x.sofor))()`;
+async function mebbisSoforOku(odak) {
+  let liste = null;
+  for (const w of mebbisPencereleri(odak)) {
+    let cerceveler = []; try { cerceveler = w.webContents.mainFrame.framesInSubtree; } catch (x) { cerceveler = [w.webContents.mainFrame]; }
+    for (const f of cerceveler) { try { const l = await f.executeJavaScript(SOFOR_OKU_JS); if (l && l.length) { liste = l; break; } } catch (x) {} }
+    if (liste) break;
+  }
+  if (!liste) { dialog.showMessageBox({ type: 'info', message: 'Şoför puantaj sayfası bulunamadı.', detail: "MEBBİS'te Taşımalı Öğrenci Modülü → İlkokul-Orta Okul Taşıma İşlemleri → Taşıma Araç Şoför Puantaj İşlemleri sayfasını açın, araçlar görününce tekrar deneyin." }); return; }
+  anaPencere.show(); anaPencere.focus();
+  const var_ = await anaPencere.webContents.executeJavaScript(`typeof mebbisSoforAktar === 'function'`);
+  if (!var_) { dialog.showMessageBox(anaPencere, { type: 'warning', message: 'Bu program sürümü şoför aktarmasını bilmiyor.', detail: 'Program → Güncellemeleri denetle ile programı güncelleyin.' }); return; }
+  await anaPencere.webContents.executeJavaScript(`mebbisSoforAktar(${JSON.stringify({ soforler: liste })})`);
+}
+ipcMain.on('mebbis-sofor-aktar', e => mebbisSoforOku(BrowserWindow.fromWebContents(e.sender)));
 ipcMain.on('mebbis-servis-aktar', e => mebbisServisOku(e));
 ipcMain.on('mebbis-rehber-ogrenci', e => menudenOgrenci(null, BrowserWindow.fromWebContents(e.sender)));
 ipcMain.on('mebbis-rehber-servis', async e => {
@@ -709,7 +729,7 @@ ipcMain.on('mebbis-tek-karsilastir', async e => {
     if (!m || !m.ogrenciler.length) { dialog.showMessageBox({ type: 'info', message: 'Açık bir güzergah penceresi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri'nde bir güzergahın ✏️ (Servis Bilgisi Düzenle) penceresini açın, sonra tekrar deneyin." }); return; }
     const L = await wc.executeJavaScript('__tsr.liste()');
     const g = (L || []).find(x => __plk(x.plaka) === __plk(m.plaka));
-    const veri = { guzNo: g ? g.guzNo : '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler };
+    const veri = { guzNo: g ? g.guzNo : '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g ? g.kapasite : '', maliyet: g ? g.maliyet : '' };
     anaPencere.show(); anaPencere.focus();
     const var_ = await anaPencere.webContents.executeJavaScript(`typeof mebbisTekKarsilastir === 'function'`);
     if (!var_) { dialog.showMessageBox(anaPencere, { type: 'warning', message: 'Bu program sürümü tek güzergah karşılaştırmasını bilmiyor.', detail: 'Programı güncelleyin.' }); return; }
@@ -736,8 +756,21 @@ const ISARETLE_JS = plan => `(async () => {
     if (durum(b) === ister) { sonuc.tamam.push(k.ad); tr.style.outline = '3px solid ' + (ister ? '#16a34a' : '#dc2626'); tr.style.outlineOffset = '-3px'; }
     else sonuc.olmadi.push(k.ad + ' (işaret değişmedi)');
   };
-  for (const k of plan.ekle) await isle(k, true);
-  for (const k of plan.cikar) await isle(k, false);
+  for (const k of plan.cikar) await isle(k, false);             // önce çıkar: araçta yer açılsın
+  const seciliSay = () => [...kok.querySelectorAll('[id$="btnSelect"]')].filter(b => durum(b) === true).length;
+  sonuc.kapasiteDisi = [];
+  for (const k of plan.ekle) {
+    if (plan.kapasite > 0 && seciliSay() >= plan.kapasite) { sonuc.kapasiteDisi.push(k.ad); continue; }   // ihale kapasitesi aşılmaz
+    await isle(k, true);
+  }
+  if (plan.kaydet) {
+    const btn = document.querySelector('[id$="wndOgrenci_C_btnSave"]') || [...document.querySelectorAll('[id$="btnSave"]')].find(gor);
+    if (!btn) { sonuc.kayit = 'düğme yok'; return sonuc; }
+    sonuc.beklenen = seciliSay();
+    setTimeout(() => btn.click(), 50);                          // MEBBİS'in uyarı penceresi işlemi kilitlemesin
+    sonuc.kayit = 'basıldı';
+    return sonuc;
+  }
   const kay = document.querySelector('[id$="btnSave"]');
   if (kay) { kay.style.boxShadow = '0 0 0 4px #fde047, 0 0 18px #f59e0b'; kay.scrollIntoView({ block: 'center' }); }
   let not = document.getElementById('__tasima_isaret_not'); if (not) not.remove();
@@ -752,6 +785,34 @@ ipcMain.on('mebbis-isaretle', async (e, plan) => {
   let r;
   try { r = await sonMebbis.wc.executeJavaScript(ISARETLE_JS(plan)); } catch (x) { r = { hata: x.message }; }
   const w = BrowserWindow.fromWebContents(sonMebbis.ana);
+  if (r && !r.hata && plan.kaydet) {                             // kaydettikten sonra MEBBİS'ten tekrar oku ve doğrula
+    let dogru = null;
+    for (let i = 0; i < 12 && r.kayit === 'basıldı'; i++) {
+      await new Promise(z => setTimeout(z, 1000));
+      try {
+        await sonMebbis.wc.executeJavaScript(SERVIS_YARDIMCI);
+        const m = await sonMebbis.wc.executeJavaScript('__tsr.modalOku()');
+        if (m && m.ogrenciler && m.ogrenciler.length) {
+          const yesil = new Set(m.ogrenciler.filter(o => o.durum === 'yesil').map(o => o.tc));
+          const eklenmedi = plan.ekle.filter(k => !r.kapasiteDisi.includes(k.ad) && !yesil.has(k.tc)).map(k => k.ad);
+          const cikmadi = plan.cikar.filter(k => yesil.has(k.tc)).map(k => k.ad);
+          dogru = { eklenmedi, cikmadi, secili: yesil.size };
+          if (!eklenmedi.length && !cikmadi.length) break;
+        }
+      } catch (x) {}
+    }
+    const parca = [];
+    if ((plan.programSonuc || []).length) parca.push('PROGRAMDA:\n' + plan.programSonuc.map(x => '• ' + x).join('\n'));
+    parca.push(`MEBBİS'TE DEĞİŞTİ (${r.tamam.length}):\n` + (r.tamam.map(x => '• ' + x).join('\n') || '—'));
+    if (r.olmadi.length) parca.push('YAPILAMADI:\n' + r.olmadi.map(x => '• ' + x).join('\n'));
+    if (r.kapasiteDisi.length) parca.push(`ARAÇ KAPASİTESİ (${plan.kapasite}) DOLU — YERLEŞTİRİLMEDİ:\n` + r.kapasiteDisi.map(x => '• ' + x).join('\n') + '\n(Başka güzergaha alın ya da ilçeden kapasite artışı isteyin.)');
+    const sorun = !dogru || dogru.eklenmedi.length || dogru.cikmadi.length || r.kayit !== 'basıldı';
+    if (dogru) parca.push(sorun ? `KONTROL: MEBBİS'te eksik kalanlar var!\n` + [...dogru.eklenmedi.map(x => '• eklenmedi: ' + x), ...dogru.cikmadi.map(x => '• çıkarılmadı: ' + x)].join('\n') : `KONTROL: MEBBİS'ten tekrar okundu, kayıt doğru. Araçta ${dogru.secili} öğrenci.`);
+    else parca.push(r.kayit === 'düğme yok' ? 'KAYDET düğmesi bulunamadı — MEBBİS\'te kaydet\'e siz basın.' : 'KONTROL: Kayıttan sonra pencere okunamadı. MEBBİS\'te sonucu gözle kontrol edin.');
+    if (w && !w.isDestroyed()) { w.show(); w.focus(); }
+    dialog.showMessageBox(w || anaPencere, { type: sorun ? 'warning' : 'info', message: `${plan.guzNo} NOLU GÜZERGAH: ${sorun ? 'kayıtta sorun var, kontrol edin' : 'MEBBİS\'e kaydedildi'}`, detail: parca.join('\n\n') });
+    return;
+  }
   if (r && r.hata) {
     dialog.showMessageBox(anaPencere, { type: 'warning', message: 'MEBBİS\'te işaretler ayarlanamadı.', detail: r.hata === 'pencere' ? "Güzergahın ✏️ penceresi kapanmış. Açıp tekrar karşılaştırın." : r.hata === 'plaka' ? `Şu an açık olan pencere başka bir araç (${r.acik}). Doğru güzergahın penceresini açıp tekrar karşılaştırın.` : r.hata });
     return;
@@ -1032,6 +1093,7 @@ function menuKur() {
       { type: 'separator' },
       { label: "Öğrenci listesini programa aktar (Öğrenci Planlama sayfası)", accelerator: 'CmdOrCtrl+Shift+O', click: menudenOgrenci },
       { label: "Güzergahları programa aktar (Taşıma Servis İşlemleri sayfası)", accelerator: 'CmdOrCtrl+Shift+G', click: menudenServis },
+      { label: "Şoför bilgilerini programa aktar (Taşıma Araç Şoför Puantaj sayfası)", accelerator: 'CmdOrCtrl+Shift+F', click: (i, w) => mebbisSoforOku(w) },
       { type: 'separator' },
       { label: 'MEBBİS sayfasını kaydet (sorun bildirmek için)', click: mebbisSayfaKaydet },
       { type: 'separator' },
