@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.10';
+const KABUK_SURUM = '1.1.12';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -74,8 +74,26 @@ function gunlukYedek() {
   try {
     if (!fs.existsSync(y.veri)) return;
     const k = gunKlasoru();
-    if (fs.readdirSync(k).some(f => / - Günlük yedek - /.test(f))) return;   // o günün yedeği bir kez alınır (günün ilk açılışındaki hâl)
-    fs.copyFileSync(y.veri, path.join(k, yedekAdi('Günlük yedek')));
+    if (!fs.readdirSync(k).some(f => / - Günlük yedek - /.test(f)))   // o günün yedeği bir kez alınır (günün ilk açılışındaki hâl)
+      fs.copyFileSync(y.veri, path.join(k, yedekAdi('Günlük yedek')));
+    // Programda birden çok okul varsa her okulun kendi yedeği de ayrı dosya (o okulun adıyla, tek başına geri yüklenebilir)
+    if (Date.now() - (global.__okulYedekSon || 0) > 10 * 60e3) try {      // en çok 10 dakikada bir bakılır
+      global.__okulYedekSon = Date.now();
+      const v = JSON.parse(fs.readFileSync(y.veri, 'utf8')); const t = programAnahtari();
+      let L = []; try { L = JSON.parse(v[t + '_okullar'] || '[]'); } catch (x) {}
+      const idler = [...new Set(['', ...(Array.isArray(L) ? L.map(o => o && o.id).filter(x => typeof x === 'string') : [])])];
+      if (t && idler.length > 1) {
+        const mevcut = fs.readdirSync(k);
+        idler.forEach(id => {
+          const anahtar = id ? t + '__' + id : t; if (!v[anahtar]) return;
+          let d; try { d = JSON.parse(v[anahtar]); } catch (x) { return; }
+          const lo = (Array.isArray(L) ? L : []).find(o => o && o.id === id) || {};
+          const ad = dosyaUygun(String(d.okulAdi || lo.ad || 'Okul').trim()) || 'Okul';
+          if (mevcut.some(f => f.startsWith(ad + ' - Okul yedeği - '))) return;
+          fs.writeFileSync(path.join(k, `${ad} - Okul yedeği - ${trTarih()} ${trSaat()}.json`), JSON.stringify(d), 'utf8');
+        });
+      }
+    } catch (x) {}
     // 60 günden eski gün klasörlerini temizle
     const sinir = Date.now() - 60 * 864e5;
     fs.readdirSync(y.yedek).forEach(f => {
@@ -167,14 +185,15 @@ async function yedekYukle(dosya) {
   const r = await dialog.showMessageBox(anaPencere, {
     type: 'question', title: 'Verileri aktar',
     message: 'Bu yedek programa aktarılsın mı?',
-    detail: `${path.basename(dosya)}\n${tarih}\n\n${yedekOzeti(o)}\n\nProgramdaki mevcut verilerin yerine geçer (mevcut hali önce Yedekler klasörüne kaydedilir).`,
+    detail: `${path.basename(dosya)}\n${tarih}\n\n${yedekOzeti(o)}\n\nŞu an açık olan okulun (${okulAdiBul()}) verilerinin yerine geçer (mevcut hali önce Yedekler klasörüne kaydedilir).${o.okulAdi && dosyaUygun(o.okulAdi).toLocaleUpperCase('tr-TR') !== okulAdiBul().toLocaleUpperCase('tr-TR') ? `\n\nDİKKAT: Yedek "${o.okulAdi}" okuluna ait, açık olan okul farklı!` : ''}`,
     buttons: ['Aktar', 'Vazgeç'], defaultId: 0, cancelId: 1
   });
   if (r.response !== 0) return;
   const y = yollar();
   if (fs.existsSync(y.veri)) try { fs.copyFileSync(y.veri, path.join(gunKlasoru(), yedekAdi('Aktarma öncesi'))); } catch (e) {}
   const mevcut = veriOku() || {};
-  mevcut[anahtar] = JSON.stringify(o);
+  const aktif = mevcut[anahtar + '_aktif_okul'] || '';            // programa birden çok okul eklenmişse açık olan okula yüklenir
+  mevcut[aktif ? anahtar + '__' + aktif : anahtar] = JSON.stringify(o);
   veriYaz(JSON.stringify(mevcut));
   anaPencere.webContents.send('dosyadan-yeniden-yukle');
 }
@@ -889,7 +908,9 @@ ipcMain.on('mebbis-isaretle', async (e, plan) => {
     if (dogru) parca.push(sorun ? `KONTROL: MEBBİS'te eksik kalanlar var!\n` + [...dogru.eklenmedi.map(x => '• eklenmedi: ' + x), ...dogru.cikmadi.map(x => '• çıkarılmadı: ' + x)].join('\n') : `KONTROL: MEBBİS'ten tekrar okundu, kayıt doğru. Araçta ${dogru.secili} öğrenci.`);
     else parca.push(r.kayit === 'düğme yok' ? 'KAYDET düğmesi bulunamadı — MEBBİS\'te kaydet\'e siz basın.' : 'KONTROL: Kayıttan sonra pencere okunamadı. MEBBİS\'te sonucu gözle kontrol edin.');
     if (w && !w.isDestroyed()) { w.show(); w.focus(); }
-    dialog.showMessageBox(w || anaPencere, { type: sorun ? 'warning' : 'info', message: `${plan.guzNo} NOLU GÜZERGAH: ${sorun ? 'kayıtta sorun var, kontrol edin' : 'MEBBİS\'e kaydedildi'}`, detail: parca.join('\n\n') });
+    const sira = !!(yerlestirCtx && yerlestirCtx.aktif);
+    dialog.showMessageBox(w || anaPencere, { type: sorun ? 'warning' : 'info', message: `${plan.guzNo} NOLU GÜZERGAH: ${sorun ? 'kayıtta sorun var, kontrol edin' : 'MEBBİS\'e kaydedildi'}`, detail: parca.join('\n\n'), buttons: sira ? ['Sıradaki güzergah ▶', 'Tamam'] : ['Tamam'], defaultId: 0, cancelId: sira ? 1 : 0 })
+      .then(c => { if (sira && c.response === 0) yerlestirGoster(yerlestirCtx, 'siradaki'); });
     return;
   }
   if (r && r.hata) {
