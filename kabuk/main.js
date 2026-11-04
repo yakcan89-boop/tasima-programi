@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.9';
+const KABUK_SURUM = '1.1.10';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -711,11 +711,11 @@ const PERSONEL_OKU_JS = `(() => {
   const bas = satirlar.find(r => r.querySelector('th')) || satirlar[0]; if (!bas) return [];
   const B = [...bas.children].map(tx);
   const i = ad => B.findIndex(h => h.toLocaleLowerCase('tr-TR') === ad);
-  const ia = i('adı'), is = i('soyadı'), ig = i('görevi'), ial = i('alanı'), id = i('durumu'), ik = i('kadro ünvanı');
+  const ia = i('adı'), is = i('soyadı'), ig = i('görevi'), ial = i('alanı'), id = i('durumu'), ik = i('kadro ünvanı'), iy = i('görev yeri'), ic = i('cinsiyeti');
   if (ia < 0 || is < 0) return [];
   return satirlar.filter(r => r !== bas && r.querySelectorAll('td').length >= B.length - 1).map(r => {
     const c = [...r.children].map(tx);
-    return { ad: c[ia] || '', soyad: c[is] || '', gorev: ig >= 0 ? c[ig] : '', brans: ial >= 0 ? c[ial] : '', durum: id >= 0 ? c[id] : '', unvan: ik >= 0 ? c[ik] : '' };
+    return { ad: c[ia] || '', soyad: c[is] || '', gorev: ig >= 0 ? c[ig] : '', brans: ial >= 0 ? c[ial] : '', durum: id >= 0 ? c[id] : '', unvan: ik >= 0 ? c[ik] : '', gorevYeri: iy >= 0 ? c[iy] : '', cinsiyet: ic >= 0 ? c[ic] : '' };
   }).filter(x => x.ad || x.soyad);
 })()`;
 async function mebbisPersonelOku(odak) {
