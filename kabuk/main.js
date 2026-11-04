@@ -687,6 +687,59 @@ async function mebbisServisOku(e) {
 
 const __plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, '');
 
+/* ---------- PROGRAMDAN GÜZERGAHA YERLEŞTİR: güzergahlar sırayla açılır, her biri programla karşılaştırılır ---------- */
+let yerlestirCtx = null;
+async function yerlestirGoster(ctx, mod) {
+  const hedef = () => (ctx.wc && ctx.wc.parent) ? ctx.wc : ctx.ana;
+  const js = async kod => { let son; for (let d = 0; d < 6; d++) { try { const h = hedef(); await h.executeJavaScript(SERVIS_YARDIMCI); return await h.executeJavaScript(kod); } catch (x) { son = x; await bekle(700); } } throw son; };
+  try {
+    let L = await js('__tsr.liste()');
+    if (!L || !L.length) { dialog.showMessageBox({ type: 'info', message: 'Güzergah listesi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasında Sorgula deyin, güzergahlar görününce tekrar deneyin." }); return; }
+    let m = (await js('__tsr.modalKok()')) ? await js('__tsr.modalOku()') : null;
+    let n = -1;
+    if (m && m.plaka && mod !== 'siradaki' && mod !== 'bastan') n = L.findIndex(g => __plk(g.plaka) === __plk(m.plaka));
+    if (n < 0) {
+      if (mod === 'bastan') n = 0;
+      else {
+        const son = (m && m.plaka) || ctx.sonPlaka || '';
+        const i = son ? L.findIndex(g => __plk(g.plaka) === __plk(son)) : -1;
+        n = mod === 'siradaki' ? i + 1 : Math.max(0, i);
+      }
+      if (n >= L.length) {
+        const r = await dialog.showMessageBox(anaPencere, { type: 'info', message: 'Son güzergaha gelindi.', detail: 'Bütün güzergahlar sırayla açıldı. Başka araçtan çıkarıldığı için eklenemeyen öğrenci kaldıysa baştan bir tur daha yapın (ikinci turda eklenir).', buttons: ['Baştan bir tur daha', 'Bitir'], defaultId: 1, cancelId: 1 });
+        if (r.response === 0) return yerlestirGoster(ctx, 'bastan');
+        yerlestirCtx = null; return;
+      }
+      if (m) { await js('__tsr.modalKapat()').catch(() => {}); for (let t = 0; t < 10; t++) { await bekle(400); if (!(await js('__tsr.modalKok()').catch(() => false))) break; if (t === 5) { ctx.ana.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); ctx.ana.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); } } }
+      L = await js('__tsr.liste()');
+      const g = L[n]; if (!g || !g.duzVar) { dialog.showMessageBox({ type: 'warning', message: `${g ? g.guzNo : ''} nolu güzergahın düzenle (✏️) düğmesi bulunamadı.` }); return; }
+      await js(`(() => { const d = document.querySelector('[data-tasima-duz="${n}"]'); if (d) d.click(); return !!d; })()`);
+      m = null; let onceki = -1;
+      for (let t = 0; t < 60; t++) {
+        await bekle(500);
+        let o = null; try { o = await js('__tsr.modalOku()'); } catch (x) {}
+        if (!o || !o.ogrenciler.length) continue;
+        if (o.plaka && __plk(o.plaka) !== __plk(g.plaka)) continue;
+        if (o.ogrenciler.length === onceki) { m = o; break; }
+        onceki = o.ogrenciler.length;
+      }
+      if (!m) { dialog.showMessageBox({ type: 'warning', message: `${g.guzNo} nolu güzergahın öğrenci penceresi okunamadı.`, detail: 'Pencereyi kendiniz açıp tekrar 📤 düğmesine basın.' }); return; }
+    }
+    const g = L.find(x => __plk(x.plaka) === __plk(m.plaka)) || L[n] || {};
+    const sira = L.indexOf(g);
+    ctx.sonPlaka = m.plaka; ctx.aktif = true; yerlestirCtx = ctx;
+    sonMebbis = { wc: hedef(), ana: ctx.ana };
+    const veri = { guzNo: g.guzNo || '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite || '', maliyet: g.maliyet || '', yon: 'm', sira: sira + 1, toplam: L.length, siradakiVar: true };
+    anaPencere.show(); anaPencere.focus();
+    await anaPencere.webContents.executeJavaScript(`mebbisTekKarsilastir(${JSON.stringify(veri)})`);
+  } catch (x) { dialog.showErrorBox('Yerleştirme', x.message); }
+}
+ipcMain.on('mebbis-yerlestir', e => {
+  const wc = (e.senderFrame && e.senderFrame.parent) ? e.senderFrame : e.sender;
+  yerlestirGoster({ wc, ana: e.sender }, 'ac');
+});
+ipcMain.on('mebbis-siradaki', () => { if (yerlestirCtx) yerlestirGoster(yerlestirCtx, 'siradaki'); else dialog.showMessageBox(anaPencere, { type: 'info', message: "MEBBİS'te Taşıma Servis İşlemleri sayfasında 📤 Programdan güzergaha yerleştir düğmesine basın." }); });
+
 ipcMain.on('mebbis-aktar', e => mebbisOgrenciAktar(e));
 /* prompt() masaüstünde çalışmaz: aynı işi gören küçük pencere. Sayfa cevap gelene kadar bekler. */
 ipcMain.on('istem', (e, mesaj, varsayilan) => {
