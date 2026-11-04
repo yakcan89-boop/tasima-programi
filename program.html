@@ -244,6 +244,10 @@
   }
 </style>
 <script>
+/* Masaüstü programında prompt() çalışmaz; aynı işi masaüstünün küçük penceresi yapar */
+if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.masaustu.istem(m == null ? '' : String(m), v == null ? '' : String(v));
+</script>
+<script>
 /* Masaüstü programında "Yükle / Dosya seç" pencereleri Belgeler\Taşıma Programı\İndirilenler klasöründe açılır */
 (function () {
   const asil = HTMLInputElement.prototype.click;
@@ -292,7 +296,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 07.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 09.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -3678,7 +3682,7 @@
     // okul: MEBBİS'teki görev yeri (en çok geçen)
     const say = {}; P.forEach(p => { const g = String(p.gorevYeri || '').trim(); if (g) say[g] = (say[g] || 0) + 1; });
     const mebOkul = Object.keys(say).sort((a, b) => say[b] - say[a])[0] || '';
-    const okulBul = ad => nobetOkullari.find(o => N(o.ad) === N(ad)) || nobetOkullari.find(o => N(o.ad).includes(N(ad)) || N(ad).includes(N(o.ad)));
+    const okulBul = ad => nobetOkullari.find(o => N(o.ad) === N(ad)) || nobetOkullari.find(o => okulAdBenzer(o.ad, ad));
     const mevcutOkul = mebOkul ? okulBul(mebOkul) : null;
     const okulAd = mevcutOkul ? mevcutOkul.ad : (mebOkul ? N(mebOkul) : bizimOkulAdi());
     const islem = [];   // {tur, metin, uygula()}
@@ -6457,6 +6461,40 @@
   const GUN_KISA = { mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum' };
   const GUN_UZUN = { mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba', thu: 'Perşembe', fri: 'Cuma' };
 
+  /* Aynı okul mu? "Fakılar Ş.E.İ. İlkokulu" = "Yeşilyöre Fakılar Şehit Erkan İmalı İlkokulu";
+     ama "Yeşilyöre İlkokulu" ≠ "Yeşilyöre Fakılar … İlkokulu" (aynı binadaki iki okul karışmaz) */
+  function okulAdBenzer(a, b) {
+    const N = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/[^A-ZÇĞİÖŞÜ0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const GENEL = ['OKULU', 'İLKOKULU', 'ORTAOKULU', 'LİSESİ', 'ANAOKULU', 'İMAM', 'HATİP'];
+    const A = N(a), B = N(b); if (!A || !B) return false;
+    if (A === B || (A.length > 6 && B.includes(A)) || (B.length > 6 && A.includes(B))) return true;
+    const P = s => s.split(' ').filter(w => w && !GENEL.includes(w));
+    const kisaltma = (k, u) => { const K = P(k), U = P(u); if (K.length < 2 || !K.some(w => w.length === 1)) return false; let j = 0; for (const w of K) { while (j < U.length && !(U[j] === w || (w.length === 1 && U[j].startsWith(w)))) j++; if (j >= U.length) return false; j++; } return true; };
+    if (kisaltma(A, B) || kisaltma(B, A)) return true;
+    const K = P(A).filter(w => w.length > 2 && w !== 'ŞEHİT'), U = P(B).filter(w => w.length > 2 && w !== 'ŞEHİT');
+    const ort = K.filter(w => U.includes(w)).length;
+    return ort >= 2 && ort >= Math.ceil(0.6 * Math.min(K.length, U.length)) && ort >= Math.min(K.length, U.length) - 0;
+  }
+  /* Nöbet okullarında aynı okul iki kez kayıtlıysa birleştirir (öğretmen, idareci, servis sütunu taşınır) */
+  function nobetOkulTekrarBirlestir() {
+    const sonuc = [];
+    for (let tur = 0; tur < 10; tur++) {
+      let ci = null;
+      for (let i = 0; i < nobetOkullari.length && !ci; i++) for (let j = i + 1; j < nobetOkullari.length && !ci; j++) if (okulAdBenzer(nobetOkullari[i].ad, nobetOkullari[j].ad)) ci = [nobetOkullari[i], nobetOkullari[j]];
+      if (!ci) break;
+      const say = o => nobetOgretmenleri.filter(t => t.okul === o.ad).length;
+      let [kal, git] = ci;
+      if ((git.bizim && !kal.bizim) || (!kal.bizim && !git.bizim && say(git) > say(kal))) [kal, git] = [git, kal];
+      ['mudur', 'mdrYard'].forEach(k => { if (!kal[k] && git[k]) kal[k] = git[k]; });
+      if (git.bizim) kal.bizim = true;
+      nobetOgretmenleri.forEach(t => { if (t.okul === git.ad) t.okul = kal.ad; });
+      nobetIdarecileri.forEach(t => { if (t.okul === git.ad) t.okul = kal.ad; });
+      if (okulNobetServis && okulNobetServis[git.ad]) { okulNobetServis[kal.ad] = Object.assign({}, okulNobetServis[git.ad], okulNobetServis[kal.ad] || {}); delete okulNobetServis[git.ad]; }
+      nobetOkullari.splice(nobetOkullari.indexOf(git), 1);
+      sonuc.push(`"${git.ad}" → "${kal.ad}"`);
+    }
+    return sonuc;
+  }
   function bizimOkulAdi() {
     const o = nobetOkullari.find(x => x.bizim);
     return o ? o.ad : (nobetOkullari[0] ? nobetOkullari[0].ad : '');
