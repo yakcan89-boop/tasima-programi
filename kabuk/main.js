@@ -786,12 +786,27 @@ ipcMain.on('mebbis-isaretle', async (e, plan) => {
   try { r = await sonMebbis.wc.executeJavaScript(ISARETLE_JS(plan)); } catch (x) { r = { hata: x.message }; }
   const w = BrowserWindow.fromWebContents(sonMebbis.ana);
   if (r && !r.hata && plan.kaydet) {                             // kaydettikten sonra MEBBİS'ten tekrar oku ve doğrula
-    let dogru = null;
-    for (let i = 0; i < 12 && r.kayit === 'basıldı'; i++) {
+    let dogru = null, mebbisMesaj = '';
+    // MEBBİS kaydederken pencereyi yeniler; cevapsız kalan okuma beklenmez (en çok 4 sn)
+    const sure = (p, ms) => Promise.race([p, new Promise(z => setTimeout(() => z('__zaman'), ms))]);
+    const cerceveler = () => { const L = []; for (const pw of mebbisPencereleri(w)) { try { L.push(...pw.webContents.mainFrame.framesInSubtree); } catch (x) {} } return L; };
+    for (let i = 0; i < 15 && r.kayit === 'basıldı'; i++) {
       await new Promise(z => setTimeout(z, 1000));
       try {
-        await sonMebbis.wc.executeJavaScript(SERVIS_YARDIMCI);
-        const m = await sonMebbis.wc.executeJavaScript('__tsr.modalOku()');
+        if (!mebbisMesaj) for (const f of cerceveler()) {           // MEBBİS'in "İşlem Başarılı — Eklenen / Çıkarılan" mesajı
+          const t = await sure(f.executeJavaScript(`(() => { const t = (document.body && document.body.innerText) || ''; const e = t.match(/Eklenen[^:\\n]*:\\s*(\\d+)/i), c = t.match(/Çıkarılan[^:\\n]*:\\s*(\\d+)/i); return e || c ? 'Eklenen öğrenci: ' + (e ? e[1] : '0') + ', çıkarılan öğrenci: ' + (c ? c[1] : '0') : ''; })()`).catch(() => ''), 2000);
+          if (t && t !== '__zaman') { mebbisMesaj = t; break; }
+        }
+        let wc = sonMebbis.wc, ok = await sure(wc.executeJavaScript(SERVIS_YARDIMCI).then(() => true).catch(() => false), 3000);
+        if (ok !== true) {                                           // eski çerçeve gitti: pencereyi içeren yeni çerçeveyi bul
+          wc = null;
+          for (const f of cerceveler()) { const v = await sure(f.executeJavaScript('!!document.querySelector(' + JSON.stringify('[id$="rdOgrenciListe"]') + ')').catch(() => false), 2000); if (v === true) { wc = f; break; } }
+          if (!wc) continue;
+          if (await sure(wc.executeJavaScript(SERVIS_YARDIMCI).then(() => true).catch(() => false), 3000) !== true) continue;
+          sonMebbis.wc = wc;
+        }
+        const m = await sure(wc.executeJavaScript('__tsr.modalOku()').catch(() => null), 4000);
+        if (m === '__zaman') continue;
         if (m && m.ogrenciler && m.ogrenciler.length) {
           const yesil = new Set(m.ogrenciler.filter(o => o.durum === 'yesil').map(o => o.tc));
           const eklenmedi = plan.ekle.filter(k => !r.kapasiteDisi.includes(k.ad) && !yesil.has(k.tc)).map(k => k.ad);
