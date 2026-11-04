@@ -20,9 +20,13 @@ try { contextBridge.exposeInMainWorld('masaustu', { mebbisAc: () => ipcRenderer.
   veriKaynagi: () => { try { return ipcRenderer.sendSync('veri-kaynagi-oku'); } catch (e) { return null; } },
   // tek güzergah: MEBBİS penceresinde ✔ işaretlerini ayarla (kaydetmez)
   mebbisIsaretle: plan => ipcRenderer.send('mebbis-isaretle', plan),
+  // güzergah güzergah yerleştirme: sıradaki güzergahın penceresini aç
+  mebbisSiradaki: () => ipcRenderer.send('mebbis-siradaki'),
   // dosya seçme penceresi İndirilenler klasöründe açılır
   dosyaSec: o => { try { return ipcRenderer.sendSync('dosya-sec', o); } catch (e) { return null; } },
   indirilenleriAc: () => ipcRenderer.send('indirilenleri-ac'),
+  // prompt() yerine: küçük pencere açar, cevap gelene kadar bekler (Vazgeç = null)
+  istem: (m, v) => { try { return ipcRenderer.sendSync('istem', String(m == null ? '' : m), v == null ? '' : String(v)); } catch (e) { return null; } },
   // yazdırma önizleme: sayfanın o anki hali PDF olarak gösterilir
   onizle: (html, baslik) => ipcRenderer.send('yazdir-onizle', html, baslik) }); } catch (e) {}
 try { contextBridge.exposeInMainWorld('__masaustuKaydet', () => { son = ''; kaydet(true); return true; }); } catch (e) {}
