@@ -106,6 +106,24 @@ function pencereAc() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false, spellcheck: false }
   });
   anaPencere.maximize();
+  /* Programdan indirilen her şey (yedek, okul nöbeti, Excel, Word…) tek klasöre: Belgeler\Taşıma Programı\İndirilenler */
+  anaPencere.webContents.session.on('will-download', (e, item, wc) => {
+    if (!wc || wc !== anaPencere.webContents) return;
+    const kl = yollar().indir; try { fs.mkdirSync(kl, { recursive: true }); } catch (x) {}
+    const ad = (item.getFilename() || 'dosya').replace(/[\\/:*?"<>|]+/g, ' ');
+    const uz = path.extname(ad), govde = ad.slice(0, ad.length - uz.length);
+    let yol = path.join(kl, ad), n = 2;
+    while (fs.existsSync(yol)) yol = path.join(kl, `${govde} (${n++})${uz}`);
+    item.setSavePath(yol);
+    item.once('done', (ev, durum) => {
+      if (durum !== 'completed' || !anaPencere || anaPencere.isDestroyed()) return;
+      const metin = JSON.stringify('⬇️ Kaydedildi: Belgeler\\Taşıma Programı\\İndirilenler\\' + path.basename(yol));
+      anaPencere.webContents.executeJavaScript(`(() => { let d = document.getElementById('__indir_bildirim'); if (d) d.remove(); d = document.createElement('div'); d.id = '__indir_bildirim';
+        d.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:2147483647;background:#0f766e;color:#fff;padding:9px 14px;border-radius:10px;font:13px "Segoe UI",sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.3);cursor:pointer';
+        d.textContent = ${metin} + '  (klasörü açmak için tıklayın)'; d.onclick = () => { window.masaustu && window.masaustu.indirilenleriAc && window.masaustu.indirilenleriAc(); d.remove(); };
+        document.body.appendChild(d); setTimeout(() => d.remove(), 7000); })()`).catch(() => {});
+    });
+  });
   anaPencere.loadFile(yollar().progHtml);
   anaPencere.once('ready-to-show', () => anaPencere.show());
   anaPencere.webContents.on('did-finish-load', () => {
