@@ -270,7 +270,7 @@
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 05.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 06.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -3748,16 +3748,33 @@
       <div style="padding:14px 18px;overflow:auto;font-size:13.5px">
         <div style="color:#475569">MEBBİS: ${esc(formatNameCase(v.sofor || ''))} · ${esc(v.plaka || '')} &nbsp;|&nbsp; Program: ${esc(r.driver || '')} · ${esc(r.plate || '')}</div>
         <div style="margin-top:8px;padding:8px;background:#ecfdf5;border-radius:8px;color:#065f46">✅ Aynı olan: <b>${say('ayni')}</b> öğrenci</div>
+        ${say('ekle') || say('cakisma') ? `<div style="margin-top:10px;padding:10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px">
+          <div style="font-weight:700;margin-bottom:6px">Hangisi doğru? Yönü seçin (tek tek de değiştirebilirsiniz):</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" onclick="mebbisTekYon('m')" style="background:#0e7490;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer">📤 Program doğru → Programdan MEBBİS'e yükle</button>
+            <button type="button" onclick="mebbisTekYon('p')" style="background:#7c3aed;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer">📥 MEBBİS doğru → MEBBİS'ten programa al</button>
+          </div>
+          <div id="mebbis-tek-yon-not" style="margin-top:6px;font-size:12.5px;color:#475569">Seçim yapılmadı: aşağıdaki işaretler kullanılır.</div></div>` : ''}
         ${grup('ekle', '➕ MEBBİS\'e eklenebilecekler', '#0e7490')}
         ${grup('cakisma', '⚠️ Çakışanlar — hangisi doğruysa seçin', '#b45309')}
         ${grup('bilgi', 'ℹ️ Bilgi', '#6b7280')}
         ${!say('ekle') && !say('cakisma') ? '<div style="margin-top:12px;font-weight:700;color:#065f46">Bu güzergahta program ile MEBBİS aynı. Yapılacak bir şey yok.</div>' : ''}
-        <div style="margin-top:12px;font-size:12px;color:#64748b">"MEBBİS" seçenekleri için program MEBBİS penceresindeki ✔ işaretlerini ayarlar, <b>kaydetmez</b>. Kaydet'e siz basarsınız. "Program" seçenekleri sadece programı değiştirir.</div>
+        <div style="margin-top:12px;font-size:12px;color:#64748b">"MEBBİS" seçenekleri için program MEBBİS'te önce çıkarır, sonra ekler ve <b>kaydeder</b> (araç kapasitesi aşılmaz, kayıttan sonra kontrol edilir). "Program" seçenekleri sadece programı değiştirir.</div>
       </div>
       <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
         ${say('ekle') || say('cakisma') ? '<button type="button" onclick="mebbisTekUygula()" style="background:#0e7490;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Uygula</button>' : ''}
         <button type="button" onclick="document.getElementById('mebbis-tek-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
     document.body.appendChild(m);
+  }
+  function mebbisTekYon(y) {             // 'm': program doğru → MEBBİS'e yükle · 'p': MEBBİS doğru → programa al
+    const S = mebbisTekSon; if (!S) return;
+    S.satir.forEach((x, i) => {
+      const L = [...document.querySelectorAll(`#mebbis-tek-modal input[name="mtk${i}"]`)]; if (!L.length) return;
+      const hedef = L.find(c => c.value && c.value[0] === y) || L.find(c => c.value === '');
+      if (hedef) hedef.checked = true;
+    });
+    const n = document.getElementById('mebbis-tek-yon-not');
+    if (n) n.innerHTML = y === 'm' ? "📤 <b>Programdan MEBBİS'e yükle</b> seçildi: MEBBİS programdaki gibi yapılacak ve kaydedilecek. Program değişmez." : "📥 <b>MEBBİS'ten programa al</b> seçildi: program MEBBİS'teki gibi yapılacak. MEBBİS'te hiçbir şey değişmez.";
   }
   function mebbisTekUygula() {
     const S = mebbisTekSon; if (!S) return;
