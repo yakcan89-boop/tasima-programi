@@ -688,6 +688,23 @@ async function mebbisServisOku(e) {
 const __plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, '');
 
 ipcMain.on('mebbis-aktar', e => mebbisOgrenciAktar(e));
+/* prompt() masaüstünde çalışmaz: aynı işi gören küçük pencere. Sayfa cevap gelene kadar bekler. */
+ipcMain.on('istem', (e, mesaj, varsayilan) => {
+  const ust = BrowserWindow.fromWebContents(e.sender) || anaPencere;
+  const satir = String(mesaj || '').split('\n').length;
+  const w = new BrowserWindow({ parent: ust, modal: true, width: 480, height: Math.min(640, 175 + satir * 19), resizable: false, minimizable: false, maximizable: false, show: false, title: 'Taşıma Programı', autoHideMenuBar: true, icon: path.join(__dirname, 'ikon.png'), webPreferences: { contextIsolation: true, sandbox: true } });
+  w.setMenuBarVisibility(false);
+  let bitti = false;
+  const bitir = v => { if (bitti) return; bitti = true; e.returnValue = v; if (!w.isDestroyed()) w.destroy(); };
+  w.on('page-title-updated', (ev, t) => { ev.preventDefault(); if (t.startsWith('TAMAM:')) bitir(decodeURIComponent(t.slice(6))); else if (t === 'IPTAL') bitir(null); });
+  w.on('closed', () => bitir(null));
+  const kac = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>istem</title><style>body{font:14px "Segoe UI",sans-serif;margin:0;padding:14px 16px;background:#fff;color:#0f172a}#m{white-space:pre-wrap;margin-bottom:10px;max-height:440px;overflow:auto}input{width:100%;box-sizing:border-box;padding:8px;font-size:15px;border:1px solid #94a3b8;border-radius:6px}.b{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}button{padding:8px 16px;border:0;border-radius:6px;font-weight:700;cursor:pointer;font-size:14px}#t{background:#0e7490;color:#fff}#v{background:#e2e8f0}</style></head><body>
+    <div id="m">${kac(mesaj)}</div><input id="g" value="${kac(varsayilan)}"><div class="b"><button id="v">Vazgeç</button><button id="t">Tamam</button></div>
+    <script>const g=document.getElementById('g');g.focus();g.select();const ok=()=>{document.title='TAMAM:'+encodeURIComponent(g.value)};const no=()=>{document.title='IPTAL'};document.getElementById('t').onclick=ok;document.getElementById('v').onclick=no;g.addEventListener('keydown',x=>{if(x.key==='Enter')ok();if(x.key==='Escape')no()});document.addEventListener('keydown',x=>{if(x.key==='Escape')no()});</script></body></html>`;
+  w.once('ready-to-show', () => w.show());
+  w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+});
 /* Programdaki "Yükle / Dosya seç": pencere İndirilenler klasöründe açılır, seçilen dosyalar sayfaya verilir */
 ipcMain.on('dosya-sec', (e, o) => {
   try {
