@@ -613,19 +613,17 @@
         </div>
         <div id="ilkokul-sabit-durum" style="font-size:11.5px; color:#444; margin-bottom:8px;"></div>
         <div id="ilkokul-sabit-kutu" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:10px;">
-          <div><label><b>Pazartesi:</b></label><input type="text" id="duty-mon" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"></div>
-          <div><label><b>Salı:</b></label><input type="text" id="duty-tue" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"></div>
-          <div style="background:#fff3cd; border:2px solid #d39e00; border-radius:5px; padding:5px; margin:-5px;">
-            <label><b>Çarşamba:</b></label><input type="text" id="duty-wed" value="Öğretmen Adı SOYADI" placeholder="Boş = otomatik dağıt" onchange="autoDistributeDuties(); saveDataToStorage()">
-          </div>
-          <div><label><b>Perşembe:</b></label><input type="text" id="duty-thu" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"></div>
-          <div><label><b>Cuma:</b></label><input type="text" id="duty-fri" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"></div>
+          <div id="duty-kutu-mon"><label style="display:flex;justify-content:space-between;align-items:center"><b>Pazartesi:</b><span style="font-size:11px;font-weight:bold;cursor:pointer"><input type="checkbox" id="duty-aktif-mon" checked onchange="setSabitGunAktif('mon', this.checked)" style="width:auto;vertical-align:middle"> aktif</span></label><input type="text" id="duty-mon" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"><div id="duty-not-mon" style="font-size:10.5px;color:#b45309"></div></div>
+          <div id="duty-kutu-tue"><label style="display:flex;justify-content:space-between;align-items:center"><b>Salı:</b><span style="font-size:11px;font-weight:bold;cursor:pointer"><input type="checkbox" id="duty-aktif-tue" checked onchange="setSabitGunAktif('tue', this.checked)" style="width:auto;vertical-align:middle"> aktif</span></label><input type="text" id="duty-tue" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"><div id="duty-not-tue" style="font-size:10.5px;color:#b45309"></div></div>
+          <div id="duty-kutu-wed"><label style="display:flex;justify-content:space-between;align-items:center"><b>Çarşamba:</b><span style="font-size:11px;font-weight:bold;cursor:pointer"><input type="checkbox" id="duty-aktif-wed" checked onchange="setSabitGunAktif('wed', this.checked)" style="width:auto;vertical-align:middle"> aktif</span></label><input type="text" id="duty-wed" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"><div id="duty-not-wed" style="font-size:10.5px;color:#b45309"></div></div>
+          <div id="duty-kutu-thu"><label style="display:flex;justify-content:space-between;align-items:center"><b>Perşembe:</b><span style="font-size:11px;font-weight:bold;cursor:pointer"><input type="checkbox" id="duty-aktif-thu" checked onchange="setSabitGunAktif('thu', this.checked)" style="width:auto;vertical-align:middle"> aktif</span></label><input type="text" id="duty-thu" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"><div id="duty-not-thu" style="font-size:10.5px;color:#b45309"></div></div>
+          <div id="duty-kutu-fri"><label style="display:flex;justify-content:space-between;align-items:center"><b>Cuma:</b><span style="font-size:11px;font-weight:bold;cursor:pointer"><input type="checkbox" id="duty-aktif-fri" checked onchange="setSabitGunAktif('fri', this.checked)" style="width:auto;vertical-align:middle"> aktif</span></label><input type="text" id="duty-fri" value="Öğretmen Adı SOYADI" onchange="autoDistributeDuties(); saveDataToStorage()"><div id="duty-not-fri" style="font-size:10.5px;color:#b45309"></div></div>
         </div>
         <div style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <button onclick="prepareDutySchedule()" class="btn-nav btn-orange" style="padding:8px 16px; width:auto; font-size:12px;">🔄 NÖBET ÇİZELGESİNİ HAZIRLA</button>
           <datalist id="duty-teacher-list"></datalist>
           <div style="font-size:11px; color:#7a5c00; flex:1; min-width:240px;">
-            💡 <b>Çarşamba boş bırakılırsa</b> o ayın Çarşamba günleri dört öğretmene sırayla dağıtılır. Dağıtımdan sonra aşağıdaki çizelgeden <b>her Çarşambaya istediğiniz öğretmeni yazabilirsiniz</b> — kutuya tıklayınca öğretmen adları liste halinde çıkar. Elle değiştirdiğiniz günler ✏️ ile işaretlenir, <b>kalıcı olarak saklanır</b>, ay değişse veya programı kapatsanız da silinmez. ↺ ile o günü otomatik dağıtıma döndürebilirsiniz.
+            💡 Her gün kendi sabit öğretmeniyle yazılır. Bir günün <b>aktif</b> işaretini kaldırırsanız o gün servis nöbetçisi <b>Okul Nöbeti</b>'nden alınır (öğretmen değişti, gelmiyor vb.). Aşağıdaki çizelgeden <b>istediğiniz güne istediğiniz öğretmeni yazabilirsiniz</b> — kutuya tıklayınca öğretmen adları liste halinde çıkar. Elle değiştirdiğiniz günler ✏️ ile işaretlenir, <b>kalıcı olarak saklanır</b>, ay değişse veya programı kapatsanız da silinmez. ↺ ile o günü otomatik dağıtıma döndürebilirsiniz.
           </div>
         </div>
       </div>
@@ -2149,7 +2147,7 @@
       holidays, mezuniyetYedegi, dutyOverrides, puantajCellOverrides, puantajDutyOverrides, puantajDayOverrides, ozelEgitimCellOverrides,
       okulNobetYerleri, okulNobetWeeklyTemplate, okulNobetMonthlyData, okulNobetServis, servisYazdir, puantajBaslik,
       nobetOkullari, nobetOgretmenleri, nobetBahceSirasi, nobetIdarecileri, nobetEsaslari,
-      ilkokulSabitAktif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
+      ilkokulSabitAktif, sabitGunPasif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
       ozelEgitimRouteNo, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
@@ -2215,7 +2213,7 @@
       mezuniyetYedegi, dutyOverrides, puantajCellOverrides, puantajDutyOverrides, puantajDayOverrides, ozelEgitimCellOverrides,
       okulNobetYerleri, okulNobetWeeklyTemplate, okulNobetMonthlyData, okulNobetServis, servisYazdir, puantajBaslik,
       nobetOkullari, nobetOgretmenleri, nobetBahceSirasi, nobetIdarecileri, nobetEsaslari,
-      ilkokulSabitAktif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
+      ilkokulSabitAktif, sabitGunPasif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
       ozelEgitimRouteNo, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     localStorage.setItem(VERI_ANAHTARI, JSON.stringify(appData));
@@ -2478,6 +2476,7 @@
         if (data.nobetIdarecileri) nobetIdarecileri = data.nobetIdarecileri;
         if (data.nobetEsaslari) nobetEsaslari = data.nobetEsaslari;
         if (data.ilkokulSabitAktif !== undefined) ilkokulSabitAktif = data.ilkokulSabitAktif;
+        sabitGunPasif = (data.sabitGunPasif && typeof data.sabitGunPasif === 'object') ? data.sabitGunPasif : {};
         if (data.nobetSabitTayin) nobetSabitTayin = data.nobetSabitTayin;
         nobetIzinleri = data.nobetIzinleri || [];
         denetimDuzelt = data.denetimDuzelt || {};
@@ -2531,6 +2530,7 @@
     servisYazdir = kopya(g.servisYazdir, {});
     puantajBaslik = kopya(g.puantajBaslik, { genel: {}, ozel: {} });
     nobetSabitTayin = kopya(g.nobetSabitTayin, []);
+    sabitGunPasif = kopya(g.sabitGunPasif, {});
     denetimDuzelt = kopya(g.denetimDuzelt, {});
     denetimTekForm = g.denetimTekForm !== false;
     silinenKayitlar = [];
@@ -6426,6 +6426,22 @@
 
   let ilkokulSabitAktif = (GOMULU_YEDEK.ilkokulSabitAktif !== undefined) ? !!GOMULU_YEDEK.ilkokulSabitAktif : true;     // true = sabit gün modülü yönetir, false = okul nöbeti yönetir
   let nobetSabitTayin = [];         // [{ogretmen, gun, yer}] — belirli güne sabit yer tayini
+  let sabitGunPasif = Object.assign({}, GOMULU_YEDEK.sabitGunPasif || {});   // { wed: true } = o gün sabit nöbetçi yok, okul nöbetinden alınır
+  function sabitGunGoster() {
+    WEEKDAY_KEYS.forEach(k => {
+      const pasif = !!sabitGunPasif[k];
+      const c = document.getElementById('duty-aktif-' + k); if (c) c.checked = !pasif;
+      const i = document.getElementById('duty-' + k); if (i) { i.style.opacity = pasif ? '0.45' : '1'; i.style.textDecoration = pasif ? 'line-through' : ''; }
+      const n = document.getElementById('duty-not-' + k); if (n) n.textContent = pasif ? 'Pasif: okul nöbetinden alınır' : '';
+    });
+  }
+  function setSabitGunAktif(k, aktif) {
+    if (aktif) delete sabitGunPasif[k]; else sabitGunPasif[k] = true;
+    sabitGunGoster();
+    autoDistributeDuties();
+    renderOkulNobetWeeklyTable();
+    saveDataToStorage();
+  }
 
   function setIlkokulSabitAktif(deger) {
     ilkokulSabitAktif = !!deger;
@@ -7551,7 +7567,7 @@
     };
     tb.innerHTML = nobetOgretmenleri.map((t, i) => `
       <tr${t.aktif === false ? ' style="background:#f3f4f6; color:#888;"' : ''}>
-        <td><input type="text" value="${t.name}" onchange="nobetOgretmenleri[${i}].name=formatNameCase(this.value); renderNobetPaneli(); saveDataToStorage();" style="width:100%; min-width:175px; font-weight:bold;"></td>
+        <td><input type="text" value="${t.name}" onchange="nobetOgretmenleri[${i}].name=formatNameCase(this.value); renderNobetPaneli(); saveDataToStorage();" style="width:100%; min-width:175px; font-weight:bold;">${t.brans ? `<div style="font-size:10px; color:#64748b; margin-top:1px;">${t.brans}</div>` : ''}</td>
         <td><select onchange="nobetOgretmenleri[${i}].okul=this.value; renderNobetPaneli(); saveDataToStorage();">${secenek(t.okul)}</select></td>
         <td style="text-align:center; white-space:nowrap; padding:2px;">${gunKutulari(t, i)}</td>
         <td style="text-align:center; padding:2px;">${sabitYerKutusu(t, i)}</td>
@@ -7667,7 +7683,7 @@
     // Hücreye dokunulabilir mi (sabit tayin / ilkokul sabit günü)
     const dokunulabilir = (gunKey, yer) => {
       if (sabitTayinBul(gunKey, yer)) return false;
-      if (yer === 'BAHÇE' && ilkokulSabitAktif) {
+      if (yer === 'BAHÇE' && ilkokulSabitAktif && !sabitGunPasif[gunKey]) {
         const el = document.getElementById('duty-' + gunKey);
         if (el && String(el.value || '').trim()) return false;
       }
@@ -8189,7 +8205,7 @@
         };
         const tayinliAd = sabitTayinBul(gunKey, 'BAHÇE');
         const tayinli = (tayinliAd && gunHavuzu.some(t => t.name === tayinliAd) && yereUygunMu(tayinliAd, 'BAHÇE')) ? tayinliAd : '';
-        const sabitGunAd = ilkokulSabitAktif ? formatNameCase((document.getElementById('duty-' + gunKey) || {}).value || '') : '';
+        const sabitGunAd = (ilkokulSabitAktif && !sabitGunPasif[gunKey]) ? formatNameCase((document.getElementById('duty-' + gunKey) || {}).value || '') : '';
         const sabitGun = (sabitGunAd && gunHavuzu.some(t => t.name === sabitGunAd) && yereUygunMu(sabitGunAd, 'BAHÇE')) ? sabitGunAd : '';
         const ad = tayinli || sabitGun
                  || sec(gunHavuzu.filter(t => t.okul === bahceOkul), 'bahce', kullanilan, 'BAHÇE')
@@ -8315,6 +8331,33 @@
     saveDataToStorage();
   }
 
+  function renameOkulNobetYeri(idx) {
+    const eski = okulNobetYerleri[idx]; if (eski === undefined) return;
+    if (eski === 'BAHÇE' || eski === 'GİRİŞ KAT') { alert(`"${eski}" adı değiştirilemez: program bahçe ve giriş kat nöbetini (servis nöbetçisi) bu adla bulur.`); return; }
+    const ad = prompt(`"${eski}" nöbet yerinin yeni adı:`, eski);
+    if (ad === null) return;
+    const yeni = ad.trim().toLocaleUpperCase('tr-TR');
+    if (!yeni || yeni === eski) return;
+    if (okulNobetYerleri.includes(yeni)) { alert('Bu adla bir nöbet yeri zaten var.'); return; }
+    if (yeni === 'BAHÇE' || yeni === 'GİRİŞ KAT') { alert(`"${yeni}" adı programda özel anlamlıdır, başka bir ad yazın.`); return; }
+    okulNobetYerleri[idx] = yeni;
+    [okulNobetWeeklyTemplate, okulNobetMonthlyData].forEach(o => { if (o && o[eski] !== undefined) { o[yeni] = o[eski]; delete o[eski]; } });
+    (nobetSabitTayin || []).forEach(x => { if (x.yer === eski) x.yer = yeni; });
+    (nobetOgretmenleri || []).forEach(x => { if (x && x.sabitYer === eski) x.sabitYer = yeni; });
+    ensureOkulNobetTemplate();
+    renderOkulNobetWeeklyTable();
+    renderOkulNobetMonthlyTable();
+    if (typeof renderNobetSayacPanel === 'function') renderNobetSayacPanel();
+    saveDataToStorage();
+  }
+  function moveOkulNobetYeri(idx, yon) {
+    const j = idx + yon; if (j < 0 || j >= okulNobetYerleri.length) return;
+    [okulNobetYerleri[idx], okulNobetYerleri[j]] = [okulNobetYerleri[j], okulNobetYerleri[idx]];
+    renderOkulNobetWeeklyTable();
+    renderOkulNobetMonthlyTable();
+    saveDataToStorage();
+  }
+
   function removeOkulNobetYeri(idx) {
     if (!confirm(`"${okulNobetYerleri[idx]}" nöbet yerini silmek istediğinize emin misiniz?`)) return;
     const removed = okulNobetYerleri[idx];
@@ -8341,7 +8384,7 @@
     let bahceRow = `<tr style="background:#dcfce7;"><td style="font-weight:bold;">🌳 BAHÇE <span style="font-weight:normal; font-size:9.5px;">(otomatik)</span></td>`;
     WEEKDAY_KEYS.forEach(dk => {
       const el = document.getElementById(`duty-${dk}`);
-      const val = el ? el.value : '';
+      const val = (!ilkokulSabitAktif || sabitGunPasif[dk]) ? '<span style="color:#b45309">(okul nöbetinden)</span>' : (el ? el.value : '');
       bahceRow += `<td style="text-align:center; font-style:italic; color:#166534;">${val}</td>`;
     });
     bahceRow += `<td></td></tr>`;
@@ -8353,7 +8396,7 @@
         const val = okulNobetWeeklyTemplate[yer][dk] || '';
         row += `<td><input type="text" value="${val}" onchange="updateOkulNobetTemplateCell('${yer}','${dk}',this.value)"></td>`;
       });
-      row += `<td style="text-align:center;"><button onclick="removeOkulNobetYeri(${idx})" style="color:red; cursor:pointer; border:none; background:none; font-weight:bold;">✕</button></td></tr>`;
+      row += `<td style="text-align:center; white-space:nowrap;"><button onclick="moveOkulNobetYeri(${idx},-1)" title="Yukarı taşı" style="cursor:pointer; border:none; background:none; font-weight:bold; ${idx ? '' : 'visibility:hidden;'}">▲</button><button onclick="moveOkulNobetYeri(${idx},1)" title="Aşağı taşı" style="cursor:pointer; border:none; background:none; font-weight:bold; ${idx < okulNobetYerleri.length - 1 ? '' : 'visibility:hidden;'}">▼</button><button onclick="renameOkulNobetYeri(${idx})" title="Adını değiştir" style="cursor:pointer; border:none; background:none;">✏️</button><button onclick="removeOkulNobetYeri(${idx})" title="Sil" style="color:red; cursor:pointer; border:none; background:none; font-weight:bold;">✕</button></td></tr>`;
       tbody.innerHTML += row;
     });
   }
@@ -8868,12 +8911,8 @@
     const thuTeacher = formatNameCase(thuEl.value);
     const friTeacher = formatNameCase(friEl.value);
 
-    // Çarşamba boşsa: o ayın Çarşambaları sabit gün öğretmenlerine sırayla dağıtılır.
-    // Dağıtım yalnızca seçili ay içinde yapılır, aylar arasına yayılmaz.
-    const bosMu = n => !n || n === 'Öğretmen Adı Soyadı';
-    const havuz = [monTeacher, tueTeacher, thuTeacher, friTeacher].filter(n => !bosMu(n));
-    const carsambaOto = bosMu(wedTeacher) && havuz.length > 0;
-    let carsambaSayac = 0;
+    // Çarşamba da diğer günler gibi kendi sabit öğretmeniyle yazılır.
+    const GUN_ANAHTAR = { 'Pazartesi': 'mon', 'Salı': 'tue', 'Çarşamba': 'wed', 'Perşembe': 'thu', 'Cuma': 'fri' };
 
     teacherDuty = {};
     dutyScheduleDetails = [];
@@ -8881,8 +8920,8 @@
     monthWorkDays.forEach(d => {
       const dayName = d.label.split(' ')[1];
       let teacher = '';
-      if (!ilkokulSabitAktif) {
-        // Modül pasif: servis nöbetçisi yalnızca okul nöbetinden (dutyOverrides) gelir
+      if (!ilkokulSabitAktif || sabitGunPasif[GUN_ANAHTAR[dayName]]) {
+        // Modül ya da o gün pasif: servis nöbetçisi yalnızca okul nöbetinden (dutyOverrides) gelir
         teacher = dutyOverrides[d.key] !== undefined ? dutyOverrides[d.key] : '';
         teacherDuty[d.key] = teacher;
         dutyScheduleDetails.push({ dateLabel: d.label.split(' ')[0], dayName: dayName, teacher: teacher, key: d.key });
@@ -8890,14 +8929,7 @@
       }
       if (dayName === 'Pazartesi') teacher = monTeacher;
       else if (dayName === 'Salı') teacher = tueTeacher;
-      else if (dayName === 'Çarşamba') {
-        if (carsambaOto) {
-          teacher = havuz[carsambaSayac % havuz.length];
-          carsambaSayac++;
-        } else {
-          teacher = wedTeacher;
-        }
-      }
+      else if (dayName === 'Çarşamba') teacher = wedTeacher;
       else if (dayName === 'Perşembe') teacher = thuTeacher;
       else if (dayName === 'Cuma') teacher = friTeacher;
       // Elle değiştirilen günler otomatik dağıtımın üzerine yazılır
@@ -12200,6 +12232,7 @@
       syncToplamaYeri();
       const sabitTgl = document.getElementById('ilkokul-sabit-toggle');
       if (sabitTgl) { sabitTgl.checked = ilkokulSabitAktif; }
+      sabitGunGoster();
       const sabitKutu = document.getElementById('ilkokul-sabit-kutu');
       if (sabitKutu) sabitKutu.style.opacity = ilkokulSabitAktif ? '1' : '0.45';
       const sabitBilgi = document.getElementById('ilkokul-sabit-durum');
