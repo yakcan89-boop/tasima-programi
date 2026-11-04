@@ -806,7 +806,7 @@ ipcMain.on('mebbis-isaretle', async (e, plan) => {
     parca.push(`MEBBİS'TE DEĞİŞTİ (${r.tamam.length}):\n` + (r.tamam.map(x => '• ' + x).join('\n') || '—'));
     if (r.olmadi.length) parca.push('YAPILAMADI:\n' + r.olmadi.map(x => '• ' + x).join('\n'));
     if (r.kapasiteDisi.length) parca.push(`ARAÇ KAPASİTESİ (${plan.kapasite}) DOLU — YERLEŞTİRİLMEDİ:\n` + r.kapasiteDisi.map(x => '• ' + x).join('\n') + '\n(Başka güzergaha alın ya da ilçeden kapasite artışı isteyin.)');
-    const sorun = !dogru || dogru.eklenmedi.length || dogru.cikmadi.length || r.kayit !== 'basıldı';
+    const sorun = (!dogru && !mebbisMesaj) || (dogru && (dogru.eklenmedi.length || dogru.cikmadi.length)) || r.kayit !== 'basıldı';
     if (dogru) parca.push(sorun ? `KONTROL: MEBBİS'te eksik kalanlar var!\n` + [...dogru.eklenmedi.map(x => '• eklenmedi: ' + x), ...dogru.cikmadi.map(x => '• çıkarılmadı: ' + x)].join('\n') : `KONTROL: MEBBİS'ten tekrar okundu, kayıt doğru. Araçta ${dogru.secili} öğrenci.`);
     else parca.push(r.kayit === 'düğme yok' ? 'KAYDET düğmesi bulunamadı — MEBBİS\'te kaydet\'e siz basın.' : 'KONTROL: Kayıttan sonra pencere okunamadı. MEBBİS\'te sonucu gözle kontrol edin.');
     if (w && !w.isDestroyed()) { w.show(); w.focus(); }
