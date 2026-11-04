@@ -55,22 +55,22 @@ function kur() {
   if (p) p.remove();
   p = document.createElement('div'); p.id = '__tasima_rehber'; p.setAttribute('data-adim', a + (kapali ? '-k' : ''));
   if (kapali) {                                         // kapalıyken köşede küçük düğme olarak kalır, kaybolmaz
-    p.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:2147483647;background:#0e7490;color:#fff;border:1px solid #fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.3);font:bold 11px "Segoe UI",sans-serif;padding:4px 10px;cursor:pointer;opacity:.9';
+    p.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:2147483647;background:#0e7490;color:#fff;border:1px solid #fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.3);font:bold 12.5px "Segoe UI",sans-serif;padding:6px 12px;cursor:pointer;opacity:.9';
     p.textContent = '🚌 Taşıma ▲'; p.title = 'Taşıma Programı rehberini aç';
     p.onclick = () => { window[KAPALI] = false; kur(); };
     document.body.appendChild(p); return;
   }
-  p.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:2147483647;width:250px;background:#fff;border:1px solid #0e7490;border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.25);font:11.5px/1.35 "Segoe UI",sans-serif;color:#0f172a;overflow:hidden';
+  p.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:2147483647;width:290px;background:#fff;border:1px solid #0e7490;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.25);font:12.5px/1.4 "Segoe UI",sans-serif;color:#0f172a;overflow:hidden';
   const hazir = a === 'ogr-hazir' || a === 'srv-hazir';
-  const dugme = (id, metin, renk, vurgu) => `<button type="button" id="${id}" data-etiket="${metin}" style="width:100%;margin-top:4px;padding:${vurgu ? '6px 8px' : '3px 8px'};border:0;border-radius:6px;font:bold ${vurgu ? '12px' : '11px'} 'Segoe UI',sans-serif;cursor:pointer;color:#fff;background:${renk};${vurgu ? 'box-shadow:0 0 0 2px #fde047;' : 'opacity:.7;'}">${metin}</button>`;
-  p.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;background:#0e7490;color:#fff;padding:4px 9px;font-weight:700;font-size:11.5px;cursor:pointer" id="__tr_bas">🚌 Taşıma Programı <span id="__tr_ok" title="Küçült">▼</span></div>
+  const dugme = (id, metin, renk, vurgu) => `<button type="button" id="${id}" data-etiket="${metin}" style="width:100%;margin-top:4px;padding:${vurgu ? '7px 9px' : '4px 9px'};border:0;border-radius:7px;font:bold ${vurgu ? '13px' : '12px'} 'Segoe UI',sans-serif;cursor:pointer;color:#fff;background:${renk};${vurgu ? 'box-shadow:0 0 0 2px #fde047;' : 'opacity:.7;'}">${metin}</button>`;
+  p.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;background:#0e7490;color:#fff;padding:6px 10px;font-weight:700;font-size:13px;cursor:pointer" id="__tr_bas">🚌 Taşıma Programı <span id="__tr_ok" title="Küçült">▼</span></div>
     <div id="__tr_ic" style="padding:6px 8px">
-      ${METIN[a].map((m, i) => `<div style="display:flex;gap:6px;margin-bottom:4px"><span style="flex:0 0 15px;height:15px;border-radius:50%;background:${hazir && i === 0 ? '#16a34a' : '#0e7490'};color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:10px">${i + 1}</span><span>${m}</span></div>`).join('')}
+      ${METIN[a].map((m, i) => `<div style="display:flex;gap:6px;margin-bottom:4px"><span style="flex:0 0 18px;height:18px;border-radius:50%;background:${hazir && i === 0 ? '#16a34a' : '#0e7490'};color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:11px">${i + 1}</span><span>${m}</span></div>`).join('')}
       ${a === 'pencere' ? dugme('__tasima_tek', '⚖️ Bu güzergahı programla karşılaştır', '#b45309', true) : ''}
       ${PERSONEL_SAYFASI ? dugme('__tasima_per', '👩‍🏫 Öğretmenleri Programa Aktar', '#15803d', a === 'personel-hazir') : `${dugme('__tasima_ogr', '📥 Öğrencileri Programa Aktar', '#0e7490', a === 'ogr-hazir')}
       ${dugme('__tasima_aktar', '🚌 Güzergahları Programa Aktar', '#1d4ed8', a === 'srv-hazir')}`}
       ${a === 'sofor-hazir' ? dugme('__tasima_sofor', '📞 Şoför Bilgilerini Programa Aktar', '#7c3aed', true) : ''}
-      <div style="margin-top:4px;color:#94a3b8;font-size:10px">Üst menüde de var: MEBBİS → …</div>
+      <div style="margin-top:4px;color:#94a3b8;font-size:11px">Üst menüde de var: MEBBİS → …</div>
     </div>`;
   document.body.appendChild(p);
   p.querySelector('#__tr_bas').onclick = () => { window[KAPALI] = true; kur(); };
