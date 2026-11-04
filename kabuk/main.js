@@ -669,6 +669,21 @@ async function mebbisServisOku(e) {
 const __plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, '');
 
 ipcMain.on('mebbis-aktar', e => mebbisOgrenciAktar(e));
+/* Programdaki "Yükle / Dosya seç": pencere İndirilenler klasöründe açılır, seçilen dosyalar sayfaya verilir */
+ipcMain.on('dosya-sec', (e, o) => {
+  try {
+    const kabul = String((o && o.accept) || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    let uz = [];
+    kabul.forEach(k => { if (k.startsWith('.')) uz.push(k.slice(1)); else if (k === 'image/*') uz.push('png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'); else if (k.includes('json')) uz.push('json'); else if (k.includes('sheet') || k.includes('excel')) uz.push('xlsx', 'xls'); else if (k.includes('pdf')) uz.push('pdf'); else if (k.includes('html')) uz.push('html', 'htm'); });
+    uz = [...new Set(uz)];
+    const filtre = uz.length ? [{ name: 'Uygun dosyalar', extensions: uz }, { name: 'Tüm dosyalar', extensions: ['*'] }] : [{ name: 'Tüm dosyalar', extensions: ['*'] }];
+    const kl = yollar().indir; try { fs.mkdirSync(kl, { recursive: true }); } catch (x) {}
+    const w = BrowserWindow.fromWebContents(e.sender) || anaPencere;
+    const L = dialog.showOpenDialogSync(w, { title: 'Dosya seçin', defaultPath: kl, filters: filtre, properties: (o && o.multiple) ? ['openFile', 'multiSelections'] : ['openFile'] }) || [];
+    e.returnValue = L.map(p => ({ ad: path.basename(p), veri: fs.readFileSync(p), tur: '', zaman: fs.statSync(p).mtimeMs }));
+  } catch (x) { e.returnValue = null; }
+});
+ipcMain.on('indirilenleri-ac', () => { try { fs.mkdirSync(yollar().indir, { recursive: true }); shell.openPath(yollar().indir); } catch (x) {} });
 /* Taşıma Araç Şoför Puantaj İşlemleri (ETS01010): her araç satırı "plaka / şoför / telefon / alma - okuldan alma" ve title = maliyet no */
 const SOFOR_OKU_JS = `(() => [...document.querySelectorAll('a[id$="_btnArac"]')].map(a => {
   const p = (a.innerHTML || '').split(/<br\\s*\\/?>/i).map(x => x.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim());
