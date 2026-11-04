@@ -39,8 +39,8 @@ const METIN = {
   'personel-hazir': ['Liste geldi. <b>Öğretmenleri Programa Aktar</b>\'a basın.', 'Yalnız ad soyad ve branş alınır; nöbet öğretmenlerine eklenir. MEBBİS\'te hiçbir şey değişmez.'],
   'sofor-hazir': ['Araçlar geldi. Aşağıdaki <b>Şoför Bilgilerini Programa Aktar</b> düğmesine basın.', 'Telefon, şoför, plaka ve saatler programla karşılaştırılır; siz onaylayınca kaydedilir. MEBBİS\'te hiçbir şey değişmez.'],
   'srv-sorgula': ['<b>Sorgula</b>\'ya basın ve güzergahların gelmesini bekleyin.'],
-  'srv-hazir': ['Güzergahlar geldi. Aşağıdaki <b>Güzergahları Programa Aktar</b> düğmesine basın.', 'Her güzergahın penceresi sırayla açılıp kapanır, bitene kadar dokunmayın. MEBBİS\'te hiçbir şey değişmez.'],
-  pencere: ['Bir güzergahın öğrenci penceresi açık. <b>Bu güzergahı programla karşılaştır</b> düğmesine basın.', 'Programda yönü seçin: <b>📤 Programdan MEBBİS\'e yükle</b> (program MEBBİS\'e kaydeder) ya da <b>📥 MEBBİS\'ten programa al</b> (sadece program değişir).'],
+  'srv-hazir': ['Güzergahlar geldi. <b>📤 Programdan güzergaha yerleştir</b>: güzergahlar sırayla açılır, program her birini karşılaştırır, siz onaylayınca kaydeder.', '<b>🚌 Güzergahları programa al</b>: MEBBİS\'teki hâl programa alınır, MEBBİS\'te hiçbir şey değişmez.'],
+  pencere: ['Bir güzergahın öğrenci penceresi açık. <b>📤 Programdan güzergaha yerleştir</b> düğmesine basın.', 'Programda yönü seçin: <b>📤 Programdan MEBBİS\'e yükle</b> (program MEBBİS\'e kaydeder) ya da <b>📥 MEBBİS\'ten programa al</b> (sadece program değişir).'],
   genel: ['Taşımalı Öğrenci Modülü\'ne gidin.']
 };
 const KAPALI = '__tasima_rehber_kapali';
@@ -66,15 +66,18 @@ function kur() {
   p.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;background:#0e7490;color:#fff;padding:6px 10px;font-weight:700;font-size:13px;cursor:pointer" id="__tr_bas">🚌 Taşıma Programı <span id="__tr_ok" title="Küçült">▼</span></div>
     <div id="__tr_ic" style="padding:6px 8px">
       ${METIN[a].map((m, i) => `<div style="display:flex;gap:6px;margin-bottom:4px"><span style="flex:0 0 18px;height:18px;border-radius:50%;background:${hazir && i === 0 ? '#16a34a' : '#0e7490'};color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:11px">${i + 1}</span><span>${m}</span></div>`).join('')}
-      ${a === 'pencere' ? dugme('__tasima_tek', '⚖️ Bu güzergahı programla karşılaştır', '#b45309', true) : ''}
-      ${PERSONEL_SAYFASI ? dugme('__tasima_per', '👩‍🏫 Öğretmenleri Programa Aktar', '#15803d', a === 'personel-hazir') : `${dugme('__tasima_ogr', '📥 Öğrencileri Programa Aktar', '#0e7490', a === 'ogr-hazir')}
-      ${dugme('__tasima_aktar', '🚌 Güzergahları Programa Aktar', '#1d4ed8', a === 'srv-hazir')}`}
+      ${PERSONEL_SAYFASI ? dugme('__tasima_per', '👩‍🏫 Öğretmenleri Programa Aktar', '#15803d', a === 'personel-hazir') : `<div style="display:flex;gap:5px;margin-top:5px">${[
+        ['__tasima_ogr', '📥', 'Öğrencileri programa al', '#0e7490', a === 'ogr-hazir'],
+        ['__tasima_aktar', '🚌', 'Güzergahları programa al', '#1d4ed8', a === 'srv-hazir'],
+        ['__tasima_yer', '📤', 'Programdan güzergaha yerleştir', '#b45309', a === 'srv-hazir' || a === 'pencere']
+      ].map(([id, ik, ad, renk, vurgu]) => `<button type="button" id="${id}" data-etiket="${ik} ${ad}" title="${ad}" style="flex:1;min-width:0;padding:6px 4px;border:0;border-radius:7px;font:bold 11px/1.25 'Segoe UI',sans-serif;cursor:pointer;color:#fff;background:${renk};${vurgu ? 'box-shadow:0 0 0 2px #fde047;' : 'opacity:.7;'}"><span style="font-size:15px">${ik}</span><br>${ad}</button>`).join('')}</div>`}
       ${a === 'sofor-hazir' ? dugme('__tasima_sofor', '📞 Şoför Bilgilerini Programa Aktar', '#7c3aed', true) : ''}
       <div style="margin-top:4px;color:#94a3b8;font-size:11px">Üst menüde de var: MEBBİS → …</div>
     </div>`;
   document.body.appendChild(p);
   p.querySelector('#__tr_bas').onclick = () => { window[KAPALI] = true; kur(); };
-  const ogr = p.querySelector('#__tasima_ogr'), srv = p.querySelector('#__tasima_aktar'), tek = p.querySelector('#__tasima_tek');
+  const ogr = p.querySelector('#__tasima_ogr'), srv = p.querySelector('#__tasima_aktar'), tek = p.querySelector('#__tasima_tek'), yer = p.querySelector('#__tasima_yer');
+  if (yer) yer.onclick = ev => { ev.preventDefault(); yer.disabled = true; yer.innerHTML = '⏳<br>Açılıyor…'; ipcRenderer.send('mebbis-yerlestir'); setTimeout(() => { yer.disabled = false; yer.innerHTML = '<span style="font-size:15px">📤</span><br>Programdan güzergaha yerleştir'; }, 8000); };
   if (tek) tek.onclick = ev => { ev.preventDefault(); tek.disabled = true; tek.textContent = '⏳ Okunuyor…'; ipcRenderer.send('mebbis-tek-karsilastir'); setTimeout(() => { tek.disabled = false; tek.textContent = tek.getAttribute('data-etiket'); }, 5000); };
   const per = p.querySelector('#__tasima_per');
   if (per) per.onclick = ev => { ev.preventDefault(); per.disabled = true; per.textContent = '⏳ Okunuyor…'; ipcRenderer.send('mebbis-personel-aktar'); setTimeout(() => { per.disabled = false; per.textContent = per.getAttribute('data-etiket'); }, 4000); };
