@@ -3667,6 +3667,60 @@
     const m = document.getElementById('mebbis-sofor-modal'); if (m) m.remove();
     alert('Tamamlandı.\n\n' + secili.map(d => `• ${d.t}: ${d.yeni}`).join('\n'));
   }
+  /* MEBBİS e-Personel → Personel Arama: öğretmen adı ve branşı nöbet öğretmenlerine aktarılır */
+  let mebbisPersonelSon = null;
+  function mebbisPersonelAktar(v) {
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const N = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ' ').trim();
+    const bransYaz = s => String(s || '').toLocaleLowerCase('tr-TR').replace(/(^|[\s(\/-])(\S)/g, (m, a, b) => a + b.toLocaleUpperCase('tr-TR'));
+    const L = (v.personel || []).filter(p => !p.durum || /görevde/i.test(p.durum)).map(p => {
+      const ad = formatNameCase(`${p.ad} ${p.soyad}`);
+      const idareci = /müdür/i.test(p.gorev || '');
+      const ogretmen = /öğretmen/i.test(p.gorev || '') || /öğretmen/i.test(p.unvan || '');
+      const mevcut = nobetOgretmenleri.findIndex(t => N(t.name) === N(ad));
+      return { ad, brans: bransYaz(p.brans), gorev: p.gorev || '', idareci, ogretmen, mevcut };
+    });
+    mebbisPersonelSon = L;
+    const okulSec = nobetOkullari.length ? `<select id="mper-okul" style="font-size:12px">${nobetOkullari.map(o => `<option value="${esc(o.ad)}" ${o.ad === bizimOkulAdi() ? 'selected' : ''}>${esc(o.ad)}</option>`).join('')}</select>` : '';
+    const satir = (x, i) => {
+      const durum = x.mevcut >= 0 ? (nobetOgretmenleri[x.mevcut].brans === x.brans ? '<span style="color:#065f46">listede var</span>' : '<span style="color:#0e7490">listede var · branş eklenecek</span>') : '<b style="color:#15803d">yeni eklenecek</b>';
+      const isaret = x.mevcut >= 0 ? nobetOgretmenleri[x.mevcut].brans !== x.brans : (x.ogretmen && !x.idareci);
+      return `<label style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #eef2f7"><input type="checkbox" data-mper="${i}" ${isaret ? 'checked' : ''}><span style="flex:1"><b>${esc(x.ad)}</b> <span style="color:#64748b">${esc(x.brans)}</span>${x.idareci ? ` <span style="color:#b45309">(${esc(x.gorev)})</span>` : ''}</span><span style="font-size:12px">${durum}</span></label>`;
+    };
+    const mebAd = new Set(L.map(x => N(x.ad)));
+    const yok = nobetOgretmenleri.filter(t => (t.okul || '') === bizimOkulAdi() && !mebAd.has(N(t.name)));
+    let m = document.getElementById('mebbis-personel-modal'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'mebbis-personel-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <div style="padding:12px 18px;background:#15803d;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">👩‍🏫 MEBBİS Personel → Nöbet Öğretmenleri</div>
+      <div style="padding:12px 18px;overflow:auto;font-size:13px">
+        <div style="color:#475569;margin-bottom:8px">MEBBİS'ten ${L.length} görevde personel okundu. Yalnız ad soyad ve branş alınır. İdareciler işaretsiz gelir (isterseniz işaretleyin). MEBBİS'te hiçbir şey değişmez.</div>
+        ${okulSec ? `<div style="margin-bottom:8px">Yeni eklenenlerin okulu: ${okulSec}</div>` : ''}
+        ${L.map(satir).join('')}
+        ${yok.length ? `<div style="margin-top:10px;color:#b45309;font-size:12.5px"><b>Programda olup MEBBİS listesinde olmayan (${esc(bizimOkulAdi())}):</b> ${yok.map(t => esc(t.name)).join(', ')} — silinmedi; ayrıldıysa Pasif yapın ya da silin.</div>` : ''}
+      </div>
+      <div style="padding:10px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="mebbisPersonelUygula()" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Aktar</button>
+        <button type="button" onclick="document.getElementById('mebbis-personel-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
+    document.body.appendChild(m);
+  }
+  function mebbisPersonelUygula() {
+    const L = mebbisPersonelSon; if (!L) return;
+    const secili = [...document.querySelectorAll('#mebbis-personel-modal [data-mper]')].filter(c => c.checked).map(c => L[+c.getAttribute('data-mper')]);
+    if (!secili.length) { alert('Hiç kimse seçilmedi.'); return; }
+    const okulEl = document.getElementById('mper-okul');
+    const okul = (okulEl && okulEl.value) || bizimOkulAdi() || (nobetOkullari[0] && nobetOkullari[0].ad) || '';
+    const eklenen = [], guncellenen = [];
+    secili.forEach(x => {
+      if (x.mevcut >= 0) { nobetOgretmenleri[x.mevcut].brans = x.brans; guncellenen.push(x.ad); }
+      else { nobetOgretmenleri.push({ name: x.ad, brans: x.brans, okul, aktif: true, devir: 0, gunler: { mon: true, tue: true, wed: true, thu: true, fri: true }, sabitYer: '', servisYok: {}, cinsiyet: '' }); eklenen.push(x.ad); }
+    });
+    renderNobetPaneli();
+    saveDataToStorage();
+    const m = document.getElementById('mebbis-personel-modal'); if (m) m.remove();
+    alert(`Tamamlandı.\n\nEklenen (${eklenen.length}): ${eklenen.join(', ') || '—'}\nBranşı güncellenen (${guncellenen.length}): ${guncellenen.join(', ') || '—'}\n\nYeni eklenenlerin okulda olduğu günlerini, sabit nöbet yerini ve cinsiyetini Okul Nöbeti → Tanımlar'dan ayarlayın.`);
+  }
   function mebbisServisUygula() {
     const S = mebbisServisSon; if (!S) return;
     const secili = [...document.querySelectorAll('#mebbis-servis-modal [data-mds]')].filter(c => c.checked).map(c => S.degis[+c.getAttribute('data-mds')]);
