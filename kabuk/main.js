@@ -703,6 +703,35 @@ async function mebbisSoforOku(odak) {
   if (!var_) { dialog.showMessageBox(anaPencere, { type: 'warning', message: 'Bu program sürümü şoför aktarmasını bilmiyor.', detail: 'Program → Güncellemeleri denetle ile programı güncelleyin.' }); return; }
   await anaPencere.webContents.executeJavaScript(`mebbisSoforAktar(${JSON.stringify({ soforler: liste })})`);
 }
+/* e-Personel Modülü → Personel Arama (PER00001): yalnız ad, soyad, görev, alan (branş) alınır */
+const PERSONEL_OKU_JS = `(() => {
+  const tb = document.getElementById('gvPersonelAra'); if (!tb) return null;
+  const tx = el => String((el && (el.innerText || el.textContent)) || '').replace(/\\s+/g, ' ').trim();
+  const satirlar = [...tb.querySelectorAll('tr')];
+  const bas = satirlar.find(r => r.querySelector('th')) || satirlar[0]; if (!bas) return [];
+  const B = [...bas.children].map(tx);
+  const i = ad => B.findIndex(h => h.toLocaleLowerCase('tr-TR') === ad);
+  const ia = i('adı'), is = i('soyadı'), ig = i('görevi'), ial = i('alanı'), id = i('durumu'), ik = i('kadro ünvanı');
+  if (ia < 0 || is < 0) return [];
+  return satirlar.filter(r => r !== bas && r.querySelectorAll('td').length >= B.length - 1).map(r => {
+    const c = [...r.children].map(tx);
+    return { ad: c[ia] || '', soyad: c[is] || '', gorev: ig >= 0 ? c[ig] : '', brans: ial >= 0 ? c[ial] : '', durum: id >= 0 ? c[id] : '', unvan: ik >= 0 ? c[ik] : '' };
+  }).filter(x => x.ad || x.soyad);
+})()`;
+async function mebbisPersonelOku(odak) {
+  let liste = null;
+  for (const w of mebbisPencereleri(odak)) {
+    let cerceveler = []; try { cerceveler = w.webContents.mainFrame.framesInSubtree; } catch (x) { cerceveler = [w.webContents.mainFrame]; }
+    for (const f of cerceveler) { try { const l = await f.executeJavaScript(PERSONEL_OKU_JS); if (l && l.length) { liste = l; break; } } catch (x) {} }
+    if (liste) break;
+  }
+  if (!liste) { dialog.showMessageBox({ type: 'info', message: 'Personel listesi bulunamadı.', detail: "MEBBİS'te e-Personel Modülü → Personel Arama sayfasında Durumu: Görevde seçili iken Ara'ya basın, liste görününce tekrar deneyin." }); return; }
+  anaPencere.show(); anaPencere.focus();
+  const var_ = await anaPencere.webContents.executeJavaScript(`typeof mebbisPersonelAktar === 'function'`);
+  if (!var_) { dialog.showMessageBox(anaPencere, { type: 'warning', message: 'Bu program sürümü personel aktarmasını bilmiyor.', detail: 'Program → Güncellemeleri denetle ile programı güncelleyin.' }); return; }
+  await anaPencere.webContents.executeJavaScript(`mebbisPersonelAktar(${JSON.stringify({ personel: liste })})`);
+}
+ipcMain.on('mebbis-personel-aktar', e => mebbisPersonelOku(BrowserWindow.fromWebContents(e.sender)));
 ipcMain.on('mebbis-sofor-aktar', e => mebbisSoforOku(BrowserWindow.fromWebContents(e.sender)));
 ipcMain.on('mebbis-servis-aktar', e => mebbisServisOku(e));
 ipcMain.on('mebbis-rehber-ogrenci', e => menudenOgrenci(null, BrowserWindow.fromWebContents(e.sender)));
