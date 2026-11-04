@@ -3869,7 +3869,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         else satir.push({ tur: 'cakisma', o, ad, x, aciklama: `MEBBİS'te bu araçta · programda ${x ? 'aday listesinde' : '<b>yok</b>'}`, secenek: [['m-cikar', 'MEBBİS\'ten çıkar'], ['p-tasi', `Programda ${no}'e ${x ? 'al' : 'ekle'}`]] });
       } else if (benim) {
         if (o.durum === 'gri') satir.push({ tur: 'ekle', o, ad, x, aciklama: 'Programda bu güzergahta · MEBBİS\'te hiçbir araçta değil', secenek: [['m-ekle', 'MEBBİS\'te bu araca ekle'], ['p-cikar', 'Programda aday listesine al']], varsayilan: 'm-ekle' });
-        else satir.push({ tur: 'cakisma', o, ad, x, aciklama: 'Programda bu güzergahta · MEBBİS\'te <b>başka bir araçta</b> (önce o araçtan çıkarılmalı)', secenek: [['p-cikar', 'Programda aday listesine al']] });
+        else satir.push({ tur: 'cakisma', o, ad, x, aciklama: "Programda bu güzergahta · MEBBİS'te <b>başka bir araçta</b> — önce o araçtan çıkarılmalı (o güzergaha sıra gelince çıkarılır; ikinci turda buraya eklenir)", secenek: [['p-cikar', 'Programda aday listesine al']] });
       }
     });
     // programda bu güzergahta olup MEBBİS listesinde hiç olmayanlar
@@ -3890,7 +3890,8 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       <div style="padding:14px 18px;background:#0e7490;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">⚖️ ${esc(no)} NOLU GÜZERGAH — Program ↔ MEBBİS</div>
       <div style="padding:14px 18px;overflow:auto;font-size:13.5px">
         <div style="color:#475569">MEBBİS: ${esc(formatNameCase(v.sofor || ''))} · ${esc(v.plaka || '')} &nbsp;|&nbsp; Program: ${esc(r.driver || '')} · ${esc(r.plate || '')}</div>
-        <div style="margin-top:8px;padding:8px;background:#ecfdf5;border-radius:8px;color:#065f46">✅ Aynı olan: <b>${say('ayni')}</b> öğrenci</div>
+        ${v.sira ? `<div style="margin-top:4px;color:#b45309;font-weight:700">📤 Programdan güzergaha yerleştirme · ${v.sira}. güzergah / ${v.toplam}</div>` : ''}
+        <div style="margin-top:8px;padding:8px;background:#ecfdf5;border-radius:8px;color:#065f46">✅ Var (MEBBİS'te de bu araçta): <b>${say('ayni')}</b> öğrenci${say('ayni') ? `<div style="font-size:12px;margin-top:3px;color:#047857">${satir.filter(x => x.tur === 'ayni').map(x => esc(x.ad)).join(' · ')}</div>` : ''}</div>
         ${say('ekle') || say('cakisma') ? `<div style="margin-top:10px;padding:10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px">
           <div style="font-weight:700;margin-bottom:6px">Hangisi doğru? Yönü seçin (tek tek de değiştirebilirsiniz):</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -3906,8 +3907,14 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       </div>
       <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
         ${say('ekle') || say('cakisma') ? '<button type="button" onclick="mebbisTekUygula()" style="background:#0e7490;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Uygula</button>' : ''}
+        ${v.siradakiVar ? `<button type="button" onclick="mebbisTekSiradaki()" title="Bu güzergahta değişiklik yapmadan sıradakine geç" style="background:#b45309;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Sıradaki güzergah ▶</button>` : ''}
         <button type="button" onclick="document.getElementById('mebbis-tek-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
     document.body.appendChild(m);
+    if (v.yon === 'm' && typeof mebbisTekYon === 'function') mebbisTekYon('m');
+  }
+  function mebbisTekSiradaki() {
+    const m = document.getElementById('mebbis-tek-modal'); if (m) m.remove();
+    if (window.masaustu && window.masaustu.mebbisSiradaki) window.masaustu.mebbisSiradaki();
   }
   function mebbisTekYon(y) {             // 'm': program doğru → MEBBİS'e yükle · 'p': MEBBİS doğru → programa al
     const S = mebbisTekSon; if (!S) return;
