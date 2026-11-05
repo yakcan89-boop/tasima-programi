@@ -21,7 +21,9 @@ try { contextBridge.exposeInMainWorld('masaustu', { mebbisAc: () => ipcRenderer.
   // tek güzergah: MEBBİS penceresinde ✔ işaretlerini ayarla (kaydetmez)
   mebbisIsaretle: plan => ipcRenderer.send('mebbis-isaretle', plan),
   // güzergah güzergah yerleştirme: sıradaki güzergahın penceresini aç
-  mebbisSiradaki: () => ipcRenderer.send('mebbis-siradaki'),
+  mebbisSiradaki: o => ipcRenderer.send('mebbis-siradaki', o && typeof o === 'object' ? { bitti: !!o.bitti } : {}),
+  // güzergah güzergah programa alma: { bitti } bu güzergah tamam / { dur } turu bırak
+  mebbisServisSiradaki: o => ipcRenderer.send('mebbis-servis-siradaki', o && typeof o === 'object' ? { bitti: !!o.bitti, dur: !!o.dur } : {}),
   // dosya seçme penceresi İndirilenler klasöründe açılır
   dosyaSec: o => { try { return ipcRenderer.sendSync('dosya-sec', o); } catch (e) { return null; } },
   indirilenleriAc: () => ipcRenderer.send('indirilenleri-ac'),

@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.12';
+const KABUK_SURUM = '1.1.13';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -623,7 +623,36 @@ async function sayfaHataKaydet(wc, neden) {
     return yol;
   } catch (e) { return ''; }
 }
-async function mebbisServisOku(e) {
+/* Bir güzergahın ✏️ penceresini açar, öğrencileri okur, kapatır (MEBBİS'te hiçbir şey değişmez) */
+async function pencereKapat(js, wcAna) {
+  await js('__tsr.modalKapat()').catch(() => {});
+  for (let t = 0; t < 10; t++) { await bekle(400); if (!(await js('__tsr.modalKok()').catch(() => false))) break;
+    if (t === 5) { wcAna.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); wcAna.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); } }
+}
+async function guzergahAcOku(js, wcAna, g) { const m = await guzergahAc(js, wcAna, g); await pencereKapat(js, wcAna); return m; }
+async function guzergahAc(js, wcAna, g) {
+  if (await js('__tsr.modalKok()')) await pencereKapat(js, wcAna);
+  let tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${g.i}"]'); if (!d) return false; d.click(); return true; })()`);
+  if (!tik) { await js('__tsr.liste()'); tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${g.i}"]'); if (!d) return false; d.click(); return true; })()`); }
+  let m = null, oncekiSay = -1;
+  for (let t = 0; t < 60; t++) {           // en çok ~30 sn
+    await bekle(500);
+    let o = null; try { o = await js('__tsr.modalOku()'); } catch (x) {}
+    if (!o || !o.ogrenciler.length) continue;
+    if (o.plaka && __plk(o.plaka) !== __plk(g.plaka)) continue;   // önceki aracın penceresi
+    if (o.ogrenciler.length === oncekiSay) { m = o; break; }
+    oncekiSay = o.ogrenciler.length;
+  }
+  return m;
+}
+function guzergahBirlestir(g, m, uyarilar) {
+  if (!m) return Object.assign({}, g, { okunamadi: true });
+  const yesil = m.ogrenciler.filter(o => o.durum === 'yesil');
+  if (m.seciliSayi != null && m.seciliSayi !== yesil.length) uyarilar.push(`${g.guzNo}: MEBBİS "Seçili ${m.seciliSayi}" diyor, ${yesil.length} öğrenci okunabildi`);
+  return Object.assign({}, g, { sofor: m.sofor || g.sofor, plaka: m.plaka || g.plaka, basT: m.basT || g.basT, bitT: m.bitT || g.bitT, ogrenciler: m.ogrenciler });
+}
+// secim: güzergah anahtarları (Set) — verilirse yalnız onlar okunur
+async function mebbisServisOku(e, secim) {
   const wc = e.senderFrame || e.sender, wcAna = e.sender;
   if (servisCalisiyor) return; servisCalisiyor = true;
   const hedef = () => (wc && wc.parent) ? wc : wcAna;     // ana sayfaysa her seferinde güncel sayfaya (geri gönderim sonrası yenilenir)
@@ -636,43 +665,24 @@ async function mebbisServisOku(e) {
       dialog.showMessageBox({ type: 'warning', message: 'Güzergah satırları bulunamadı.', detail: 'Taşıma Servis İşlemleri sayfasında Sorgula dedikten sonra tekrar deneyin.' + (yol ? '\n\nSayfa kaydedildi: ' + yol : '') });
       return;
     }
+    if (secim) liste = liste.filter(g => secim.has(guzAnahtar(g)));
     const sonuc = [], uyarilar = [];
     // önce her güzergahın ⓘ bölge bilgisini al (pencere açmadan)
     const bolge = {};
     for (const g of liste) { if (g.maliyet && !bolge[g.maliyet]) { try { bolge[g.maliyet] = await js(`__tsr.bolgeler(${JSON.stringify(g.maliyet)})`); } catch (x) { bolge[g.maliyet] = { hata: x.message }; } } }
-    liste.forEach(g => { g.bolge = bolge[g.maliyet] || null; });
     for (let n = 0; n < liste.length; n++) {
       const g = liste[n]; g.bolge = bolge[g.maliyet] || null;
       await durum(`⏳ ${n + 1}/${liste.length}: ${g.guzNo} nolu güzergah okunuyor…`);
       if (!g.duzVar) { uyarilar.push(`${g.guzNo}: düzenle (✏️) düğmesi bulunamadı`); sonuc.push(Object.assign({}, g, { okunamadi: true })); continue; }
-      // önceki pencere açıksa kapat
-      if (await js('__tsr.modalKok()')) { await js('__tsr.modalKapat()'); await bekle(800); }
-      let tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${n}"]'); if (!d) return false; d.click(); return true; })()`);
-      if (!tik) { liste = await js('__tsr.liste()'); tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${n}"]'); if (!d) return false; d.click(); return true; })()`); }
-      let m = null, oncekiSay = -1;
-      for (let t = 0; t < 60; t++) {           // en çok ~30 sn
-        await bekle(500);
-        let o = null; try { o = await js('__tsr.modalOku()'); } catch (x) {}
-        if (!o || !o.ogrenciler.length) continue;
-        if (o.plaka && __plk(o.plaka) !== __plk(g.plaka)) continue;   // önceki aracın penceresi
-        if (o.ogrenciler.length === oncekiSay) { m = o; break; }
-        oncekiSay = o.ogrenciler.length;
-      }
+      const m = await guzergahAcOku(js, wcAna, g);
       if (!m) {
         const yol = await sayfaHataKaydet(hedef(), g.guzNo + ' penceresi okunamadı');
         uyarilar.push(`${g.guzNo}: öğrenci penceresi okunamadı` + (yol ? ` (sayfa kaydedildi: ${yol})` : ''));
-        sonuc.push(Object.assign({}, g, { okunamadi: true }));
-      } else {
-        const yesil = m.ogrenciler.filter(o => o.durum === 'yesil');
-        if (m.seciliSayi != null && m.seciliSayi !== yesil.length) uyarilar.push(`${g.guzNo}: MEBBİS "Seçili ${m.seciliSayi}" diyor, ${yesil.length} öğrenci okunabildi`);
-        sonuc.push(Object.assign({}, g, { sofor: m.sofor || g.sofor, plaka: m.plaka || g.plaka, basT: m.basT || g.basT, bitT: m.bitT || g.bitT, ogrenciler: m.ogrenciler }));
       }
-      await js('__tsr.modalKapat()').catch(() => {});
-      for (let t = 0; t < 10; t++) { await bekle(400); if (!(await js('__tsr.modalKok()').catch(() => false))) break;
-        if (t === 5) { wcAna.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); wcAna.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); } }
+      sonuc.push(guzergahBirlestir(g, m, uyarilar));
     }
     let okulAdi = ''; try { okulAdi = await js('__tsr.okul()'); } catch (x) {}
-    const veri = { kaynak: 'MEBBİS Taşıma Servis İşlemleri', tarih: new Date().toISOString(), okul: okulAdi, guzergahlar: sonuc, uyarilar };
+    const veri = { kaynak: 'MEBBİS Taşıma Servis İşlemleri', tarih: new Date().toISOString(), okul: okulAdi, guzergahlar: sonuc, uyarilar, kismi: !!secim };
     try { fs.writeFileSync(path.join(yollar().kok, 'mebbis_son_servis.json'), JSON.stringify(veri, null, 1), 'utf8'); } catch (x) {}
     anaPencere.show(); anaPencere.focus();
     const var_ = await anaPencere.webContents.executeJavaScript(`typeof mebbisServisAktar === 'function'`);
@@ -687,49 +697,172 @@ async function mebbisServisOku(e) {
 
 const __plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, '');
 
-/* ---------- PROGRAMDAN GÜZERGAHA YERLEŞTİR: güzergahlar sırayla açılır, her biri programla karşılaştırılır ---------- */
+/* ---------- GÜZERGAH SEÇİMİ VE İLERLEME ----------
+   Kalabalık okullarda bütün güzergahları bir anda okumak yerine seçilen güzergahlar
+   tek tek açılır, her biri ayrı onaylanır. Hangi güzergahın bittiği dosyada tutulur;
+   kapatıp açınca kaldığı yerden devam edilebilir. */
+const guzAnahtar = g => g.maliyet ? 'm' + g.maliyet : 'g' + g.guzNo + '|' + __plk(g.plaka);
+const ilerlemeYol = () => path.join(yollar().kok, 'mebbis_ilerleme.json');
+function ilerlemeOku() { try { const v = JSON.parse(fs.readFileSync(ilerlemeYol(), 'utf8')); return v && typeof v === 'object' ? v : {}; } catch (x) { return {}; } }
+function ilerlemeYaz(v) { try { fs.mkdirSync(path.dirname(ilerlemeYol()), { recursive: true }); fs.writeFileSync(ilerlemeYol(), JSON.stringify(v, null, 1), 'utf8'); } catch (x) {} }
+function ilerlemeIsaretle(mod, anahtar) {
+  if (!anahtar) return; const v = ilerlemeOku(); const k = v[mod]; if (!k) return;
+  k.biten = k.biten || {}; k.biten[anahtar] = new Date().toISOString(); ilerlemeYaz(v);
+}
+function jsYap(hedef, bekleme) {
+  return async kod => { let son; for (let d = 0; d < 6; d++) { try { const h = hedef(); await h.executeJavaScript(SERVIS_YARDIMCI); return await h.executeJavaScript(kod); } catch (x) { son = x; await bekle(bekleme || 700); } } throw son; };
+}
+let secimCerceve = null;    // güzergah listesinin bulunduğu çerçeve (seçim penceresi açılınca bulunur)
+ipcMain.handle('mebbis-guzergah-liste', async e => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  const bul = await mebbisCerceveBul(w, /nolu guzergah/);
+  if (!bul) return { hata: 'sayfa' };
+  secimCerceve = bul;
+  const hedef = () => (bul.senderFrame && bul.senderFrame.parent) ? bul.senderFrame : bul.sender;
+  try {
+    const js = jsYap(hedef);
+    const L = await js('__tsr.liste()');
+    let okul = ''; try { okul = await js('__tsr.okul()'); } catch (x) {}
+    const ilerleme = ilerlemeOku();
+    Object.keys(ilerleme).forEach(k => { if (ilerleme[k] && ilerleme[k].okul && okul && ilerleme[k].okul !== okul) delete ilerleme[k]; });   // başka okulun turu
+    return { liste: (L || []).map(g => ({ anahtar: guzAnahtar(g), guzNo: g.guzNo, baslik: g.baslik, plaka: g.plaka, sofor: g.sofor, kapasite: g.kapasite })), okul, ilerleme };
+  } catch (x) { return { hata: x.message }; }
+});
+ipcMain.on('mebbis-ilerleme-sifirla', (e, mod) => { const v = ilerlemeOku(); delete v[mod]; ilerlemeYaz(v); });
+// o: { mod: 'al' | 'yer', anahtarlar: [...], tekListe: bool, okul }
+ipcMain.on('mebbis-guzergah-basla', async (e, o) => {
+  const bul = secimCerceve; if (!bul || !o || !Array.isArray(o.anahtarlar) || !o.anahtarlar.length) return;
+  if (o.mod === 'al' && o.tekListe) { mebbisServisOku(bul, new Set(o.anahtarlar)); return; }
+  const v = ilerlemeOku(); const eski = (v[o.mod] && v[o.mod].biten) || {};
+  const biten = {}; Object.keys(eski).forEach(k => { if (!o.anahtarlar.includes(k)) biten[k] = eski[k]; });   // yeniden seçilenlerin ✔'i silinir
+  v[o.mod] = { okul: o.okul || '', tarih: new Date().toISOString(), kuyruk: o.anahtarlar.slice(), biten }; ilerlemeYaz(v);
+  const wc = (bul.senderFrame && bul.senderFrame.parent) ? bul.senderFrame : bul.sender;
+  const ctx = { wc, ana: bul.sender, kuyruk: o.anahtarlar.slice(), pos: 0, sonuclar: [] };
+  if (o.mod === 'al') { servisTurCtx = ctx; servisTurGoster(ctx, 'ac'); }
+  else { yerlestirCtx = ctx; yerlestirGoster(ctx, 'kuyruk'); }
+});
+
+/* ---------- 📥 GÜZERGAH GÜZERGAH PROGRAMA AL: seçilen güzergahlar tek tek okunur, her biri programda ayrı onaylanır ---------- */
+let servisTurCtx = null;
+async function servisTurGoster(ctx, mod) {
+  const hedef = () => (ctx.wc && ctx.wc.parent) ? ctx.wc : ctx.ana;
+  const js = jsYap(hedef, 800);
+  if (servisCalisiyor) return; servisCalisiyor = true;
+  try {
+    if (mod === 'siradaki') ctx.pos++;
+    const L = await js('__tsr.liste()');
+    if (!L || !L.length) { dialog.showMessageBox({ type: 'info', message: 'Güzergah listesi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasında Sorgula deyin, güzergahlar görününce tekrar deneyin." }); return; }
+    let g = null; const atlanan = [];
+    while (ctx.pos < ctx.kuyruk.length) { g = L.find(x => guzAnahtar(x) === ctx.kuyruk[ctx.pos]); if (g && g.duzVar) break; atlanan.push(ctx.kuyruk[ctx.pos]); g = null; ctx.pos++; }
+    if (atlanan.length) ctx.sonuclar.push(`MEBBİS sayfasında bulunamayan/açılamayan ${atlanan.length} güzergah atlandı`);
+    if (!g) {
+      servisTurCtx = null;
+      anaPencere.show(); anaPencere.focus();
+      const ok = await anaPencere.webContents.executeJavaScript(`typeof mebbisTurBitti === 'function'`).catch(() => false);
+      if (ok) await anaPencere.webContents.executeJavaScript(`mebbisTurBitti(${JSON.stringify({ toplam: ctx.kuyruk.length, notlar: ctx.sonuclar })})`);
+      else dialog.showMessageBox(anaPencere, { type: 'info', message: 'Seçilen güzergahların hepsi bitti.' });
+      return;
+    }
+    hedef().executeJavaScript(`(() => { const b = document.getElementById('__tasima_aktar'); if (b) { b.disabled = true; b.innerHTML = ${JSON.stringify('⏳<br>')} + ${JSON.stringify(String(ctx.pos + 1) + '/' + ctx.kuyruk.length + ' okunuyor')}; } })()`).catch(() => {});
+    let bolge = null; if (g.maliyet) { try { bolge = await js(`__tsr.bolgeler(${JSON.stringify(g.maliyet)})`); } catch (x) { bolge = { hata: x.message }; } }
+    g.bolge = bolge;
+    const m = await guzergahAcOku(js, ctx.ana, g);
+    const uyarilar = [];
+    if (!m) { const yol = await sayfaHataKaydet(hedef(), g.guzNo + ' penceresi okunamadı'); uyarilar.push(`${g.guzNo}: öğrenci penceresi okunamadı` + (yol ? ` (sayfa kaydedildi: ${yol})` : '')); }
+    let okul = ''; try { okul = await js('__tsr.okul()'); } catch (x) {}
+    ctx.sonAnahtar = guzAnahtar(g);
+    const veri = { kaynak: 'MEBBİS Taşıma Servis İşlemleri', tarih: new Date().toISOString(), okul, guzergahlar: [guzergahBirlestir(g, m, uyarilar)], uyarilar, kismi: true,
+      sira: ctx.pos + 1, toplam: ctx.kuyruk.length, siradakiVar: true };
+    anaPencere.show(); anaPencere.focus();
+    await anaPencere.webContents.executeJavaScript(`mebbisServisAktar(${JSON.stringify(veri)})`);
+  } catch (x) { dialog.showErrorBox('Güzergah okunamadı', x.message); }
+  finally {
+    servisCalisiyor = false;
+    hedef().executeJavaScript(`(() => { const b = document.getElementById('__tasima_aktar'); if (b) { b.disabled = false; b.innerHTML = b.getAttribute('data-html') || b.innerHTML; } })()`).catch(() => {});
+  }
+}
+// program: { bitti: bu güzergah tamamlandı mı, dur: turu bırak }
+ipcMain.on('mebbis-servis-siradaki', (e, o) => {
+  const ctx = servisTurCtx; if (!ctx) return;
+  o = o || {};
+  if (o.bitti) ilerlemeIsaretle('al', ctx.sonAnahtar);
+  if (o.not) ctx.sonuclar.push(String(o.not));
+  if (o.dur) { servisTurCtx = null; return; }
+  servisTurGoster(ctx, 'siradaki');
+});
+
+/* ---------- 📥 AÇIK GÜZERGAHI PROGRAMA AL (✏️ penceresi açıkken) ---------- */
+ipcMain.on('mebbis-bu-guzergah-al', async e => {
+  const wc = (e.senderFrame && e.senderFrame.parent) ? e.senderFrame : e.sender;
+  const ana = e.sender;
+  let hedefWc = wc;
+  try {
+    const js = jsYap(() => hedefWc);
+    let m = null; try { m = await js('__tsr.modalOku()'); } catch (x) {}
+    if (!m || !m.ogrenciler || !m.ogrenciler.length) {      // pencere başka çerçevede olabilir
+      const bul = await mebbisCerceveBul(BrowserWindow.fromWebContents(ana), /ogrenci tasima bilgileri|nolu guzergah/);
+      if (bul) { hedefWc = (bul.senderFrame && bul.senderFrame.parent) ? bul.senderFrame : bul.sender; try { m = await js('__tsr.modalOku()'); } catch (x) {} }
+    }
+    if (!m || !m.ogrenciler || !m.ogrenciler.length) { dialog.showMessageBox({ type: 'info', message: 'Açık bir güzergah penceresi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri'nde bir güzergahın ✏️ penceresini açın, sonra tekrar deneyin." }); return; }
+    const L = await js('__tsr.liste()');
+    const g = (L || []).find(x => __plk(x.plaka) === __plk(m.plaka));
+    if (!g) { dialog.showMessageBox({ type: 'warning', message: 'Açık pencerenin hangi güzergaha ait olduğu bulunamadı.', detail: `Plaka: ${m.plaka || '—'}` }); return; }
+    if (g.maliyet) { try { g.bolge = await js(`__tsr.bolgeler(${JSON.stringify(g.maliyet)})`); } catch (x) {} }
+    let okul = ''; try { okul = await js('__tsr.okul()'); } catch (x) {}
+    const uyarilar = [];
+    const veri = { kaynak: 'MEBBİS Taşıma Servis İşlemleri', tarih: new Date().toISOString(), okul, guzergahlar: [guzergahBirlestir(g, m, uyarilar)], uyarilar, kismi: true };
+    anaPencere.show(); anaPencere.focus();
+    await anaPencere.webContents.executeJavaScript(`mebbisServisAktar(${JSON.stringify(veri)})`);
+  } catch (x) { dialog.showErrorBox('Okunamadı', x.message); }
+});
+
+/* ---------- PROGRAMDAN GÜZERGAHA YERLEŞTİR: güzergahlar sırayla açılır, her biri programla karşılaştırılır ----------
+   ctx.kuyruk varsa yalnız seçilen güzergahlar (seçim penceresinden), yoksa sayfadaki bütün güzergahlar. */
 let yerlestirCtx = null;
 async function yerlestirGoster(ctx, mod) {
   const hedef = () => (ctx.wc && ctx.wc.parent) ? ctx.wc : ctx.ana;
-  const js = async kod => { let son; for (let d = 0; d < 6; d++) { try { const h = hedef(); await h.executeJavaScript(SERVIS_YARDIMCI); return await h.executeJavaScript(kod); } catch (x) { son = x; await bekle(700); } } throw son; };
+  const js = jsYap(hedef);
   try {
     let L = await js('__tsr.liste()');
     if (!L || !L.length) { dialog.showMessageBox({ type: 'info', message: 'Güzergah listesi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasında Sorgula deyin, güzergahlar görününce tekrar deneyin." }); return; }
     let m = (await js('__tsr.modalKok()')) ? await js('__tsr.modalOku()') : null;
-    let n = -1;
-    if (m && m.plaka && mod !== 'siradaki' && mod !== 'bastan') n = L.findIndex(g => __plk(g.plaka) === __plk(m.plaka));
-    if (n < 0) {
-      if (mod === 'bastan') n = 0;
-      else {
-        const son = (m && m.plaka) || ctx.sonPlaka || '';
-        const i = son ? L.findIndex(g => __plk(g.plaka) === __plk(son)) : -1;
-        n = mod === 'siradaki' ? i + 1 : Math.max(0, i);
+    let n = -1, ac = -1;
+    const sonGeldi = async detay => {
+      const r = await dialog.showMessageBox(anaPencere, { type: 'info', message: ctx.kuyruk ? 'Seçilen güzergahların sonuna gelindi.' : 'Son güzergaha gelindi.', detail: detay + ' Başka araçtan çıkarıldığı için eklenemeyen öğrenci kaldıysa baştan bir tur daha yapın (ikinci turda eklenir).', buttons: ['Baştan bir tur daha', 'Bitir'], defaultId: 1, cancelId: 1 });
+      if (r.response === 0) return yerlestirGoster(ctx, 'bastan');
+      yerlestirCtx = null;
+    };
+    if (ctx.kuyruk) {
+      if (mod === 'siradaki') ctx.pos++;
+      if (mod === 'bastan') ctx.pos = 0;
+      let t = -1;
+      while (ctx.pos < ctx.kuyruk.length && ((t = L.findIndex(g => guzAnahtar(g) === ctx.kuyruk[ctx.pos])) < 0 || !L[t].duzVar)) ctx.pos++;
+      if (ctx.pos >= ctx.kuyruk.length) return sonGeldi(`Seçilen ${ctx.kuyruk.length} güzergah sırayla açıldı.`);
+      if (m && m.plaka && __plk(m.plaka) === __plk(L[t].plaka)) n = t; else ac = t;
+    } else {
+      if (m && m.plaka && mod !== 'siradaki' && mod !== 'bastan') n = L.findIndex(g => __plk(g.plaka) === __plk(m.plaka));
+      if (n < 0) {
+        if (mod === 'bastan') ac = 0;
+        else {
+          const son = (m && m.plaka) || ctx.sonPlaka || '';
+          const i = son ? L.findIndex(g => __plk(g.plaka) === __plk(son)) : -1;
+          ac = mod === 'siradaki' ? i + 1 : Math.max(0, i);
+        }
+        if (ac >= L.length) return sonGeldi('Bütün güzergahlar sırayla açıldı.');
       }
-      if (n >= L.length) {
-        const r = await dialog.showMessageBox(anaPencere, { type: 'info', message: 'Son güzergaha gelindi.', detail: 'Bütün güzergahlar sırayla açıldı. Başka araçtan çıkarıldığı için eklenemeyen öğrenci kaldıysa baştan bir tur daha yapın (ikinci turda eklenir).', buttons: ['Baştan bir tur daha', 'Bitir'], defaultId: 1, cancelId: 1 });
-        if (r.response === 0) return yerlestirGoster(ctx, 'bastan');
-        yerlestirCtx = null; return;
-      }
-      if (m) { await js('__tsr.modalKapat()').catch(() => {}); for (let t = 0; t < 10; t++) { await bekle(400); if (!(await js('__tsr.modalKok()').catch(() => false))) break; if (t === 5) { ctx.ana.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); ctx.ana.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); } } }
-      L = await js('__tsr.liste()');
-      const g = L[n]; if (!g || !g.duzVar) { dialog.showMessageBox({ type: 'warning', message: `${g ? g.guzNo : ''} nolu güzergahın düzenle (✏️) düğmesi bulunamadı.` }); return; }
-      await js(`(() => { const d = document.querySelector('[data-tasima-duz="${n}"]'); if (d) d.click(); return !!d; })()`);
-      m = null; let onceki = -1;
-      for (let t = 0; t < 60; t++) {
-        await bekle(500);
-        let o = null; try { o = await js('__tsr.modalOku()'); } catch (x) {}
-        if (!o || !o.ogrenciler.length) continue;
-        if (o.plaka && __plk(o.plaka) !== __plk(g.plaka)) continue;
-        if (o.ogrenciler.length === onceki) { m = o; break; }
-        onceki = o.ogrenciler.length;
-      }
-      if (!m) { dialog.showMessageBox({ type: 'warning', message: `${g.guzNo} nolu güzergahın öğrenci penceresi okunamadı.`, detail: 'Pencereyi kendiniz açıp tekrar 📤 düğmesine basın.' }); return; }
     }
+    if (n < 0) {
+      const g = L[ac]; if (!g || !g.duzVar) { dialog.showMessageBox({ type: 'warning', message: `${g ? g.guzNo : ''} nolu güzergahın düzenle (✏️) düğmesi bulunamadı.` }); return; }
+      m = await guzergahAc(js, ctx.ana, g);
+      if (!m) { dialog.showMessageBox({ type: 'warning', message: `${g.guzNo} nolu güzergahın öğrenci penceresi okunamadı.`, detail: 'Pencereyi kendiniz açıp tekrar 📤 düğmesine basın.' }); return; }
+      n = ac;
+    }
+    L = await js('__tsr.liste()').catch(() => L) || L;
     const g = L.find(x => __plk(x.plaka) === __plk(m.plaka)) || L[n] || {};
-    const sira = L.indexOf(g);
-    ctx.sonPlaka = m.plaka; ctx.aktif = true; yerlestirCtx = ctx;
+    const sira = ctx.kuyruk ? ctx.pos : L.indexOf(g);
+    ctx.sonPlaka = m.plaka; ctx.sonAnahtar = g.guzNo ? guzAnahtar(g) : ''; ctx.aktif = true; yerlestirCtx = ctx;
     sonMebbis = { wc: hedef(), ana: ctx.ana };
-    const veri = { guzNo: g.guzNo || '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite || '', maliyet: g.maliyet || '', yon: 'm', sira: sira + 1, toplam: L.length, siradakiVar: true };
+    const veri = { guzNo: g.guzNo || '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite || '', maliyet: g.maliyet || '', yon: 'm', sira: sira + 1, toplam: ctx.kuyruk ? ctx.kuyruk.length : L.length, siradakiVar: true };
     anaPencere.show(); anaPencere.focus();
     await anaPencere.webContents.executeJavaScript(`mebbisTekKarsilastir(${JSON.stringify(veri)})`);
   } catch (x) { dialog.showErrorBox('Yerleştirme', x.message); }
@@ -738,7 +871,12 @@ ipcMain.on('mebbis-yerlestir', e => {
   const wc = (e.senderFrame && e.senderFrame.parent) ? e.senderFrame : e.sender;
   yerlestirGoster({ wc, ana: e.sender }, 'ac');
 });
-ipcMain.on('mebbis-siradaki', () => { if (yerlestirCtx) yerlestirGoster(yerlestirCtx, 'siradaki'); else dialog.showMessageBox(anaPencere, { type: 'info', message: "MEBBİS'te Taşıma Servis İşlemleri sayfasında 📤 Programdan güzergaha yerleştir düğmesine basın." }); });
+// program: o = { bitti } — bu güzergah tamamlandıysa ilerlemeye işlenir
+ipcMain.on('mebbis-siradaki', (e, o) => {
+  if (!yerlestirCtx) { dialog.showMessageBox(anaPencere, { type: 'info', message: "MEBBİS'te Taşıma Servis İşlemleri sayfasında 📤 Programdan güzergaha yerleştir düğmesine basın." }); return; }
+  if (o && o.bitti && yerlestirCtx.kuyruk) ilerlemeIsaretle('yer', yerlestirCtx.sonAnahtar);
+  yerlestirGoster(yerlestirCtx, 'siradaki');
+});
 
 ipcMain.on('mebbis-aktar', e => mebbisOgrenciAktar(e));
 /* prompt() masaüstünde çalışmaz: aynı işi gören küçük pencere. Sayfa cevap gelene kadar bekler. */
@@ -857,7 +995,8 @@ async function menudenOgrenci(item, odak) {
 async function menudenServis(item, odak) {
   const e = await mebbisCerceveBul(odak, /nolu guzergah/);
   if (!e) { dialog.showMessageBox({ type: 'info', message: 'Taşıma Servis İşlemleri sayfası bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasını açıp Sorgula deyin, güzergahlar gelince tekrar deneyin." }); return; }
-  mebbisServisOku(e);
+  try { const w = BrowserWindow.fromWebContents(e.sender); if (w) { w.show(); w.focus(); } e.sender.send('tasima-guzergah-sec', 'al'); }   // güzergah seçme penceresi
+  catch (x) { mebbisServisOku(e); }
 }
 async function mebbisSayfaKaydet(item, odak) {
   const parca = [];
@@ -980,7 +1119,10 @@ ipcMain.on('mebbis-isaretle', async (e, plan) => {
     if (w && !w.isDestroyed()) { w.show(); w.focus(); }
     const sira = !!(yerlestirCtx && yerlestirCtx.aktif);
     dialog.showMessageBox(w || anaPencere, { type: sorun ? 'warning' : 'info', message: `${plan.guzNo} NOLU GÜZERGAH: ${sorun ? 'kayıtta sorun var, kontrol edin' : 'MEBBİS\'e kaydedildi'}`, detail: parca.join('\n\n'), buttons: sira ? ['Sıradaki güzergah ▶', 'Tamam'] : ['Tamam'], defaultId: 0, cancelId: sira ? 1 : 0 })
-      .then(c => { if (sira && c.response === 0) yerlestirGoster(yerlestirCtx, 'siradaki'); });
+      .then(c => {
+        if (!sorun && yerlestirCtx && yerlestirCtx.kuyruk) ilerlemeIsaretle('yer', yerlestirCtx.sonAnahtar);
+        if (sira && c.response === 0) yerlestirGoster(yerlestirCtx, 'siradaki');
+      });
     return;
   }
   if (r && r.hata) {
