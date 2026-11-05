@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 10.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 11.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -820,6 +820,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           <tr>
             <th style="width:35px;">S.N.</th>
             <th style="width:70px; background:#4b3f8c; color:#fff;">GÜZERGAH NO</th>
+            <th style="width:92px; background:#334155; color:#fff;" title="MEBBİS Yaklaşık Maliyet No. Yalnız bu sayfada görünür, hiçbir çıktıda yazmaz. MEBBİS eşleştirmesinde ilk bakılan bilgidir.">İHALE NO</th>
             <th style="width:170px;">GÜZERGAH ADI</th>
             <th style="width:100px; background:#1b4958; color:#fff;">VAKİT</th>
             <th style="width:130px;">ŞOFÖR ADI SOYADI</th>
@@ -3500,13 +3501,15 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
        1) Yaklaşık Maliyet No (bir kez eşleşen güzergaha kaydedilir)  2) güzergah no + ihale türü (Ana İhale / İş Artışı)
        3) plaka + şoför  4) güzergah adı. Aynı numaralı iki servis (ör. 216 Ana İhale + 216 İş Artışı) asla tek güzergaha birleşmez. */
     const ihaleTuru = g => /İŞ\s*ARTI|IS\s*ARTI/i.test(g.baslik || '') ? 'İŞ ARTIŞI' : '';
-    const isArtisiMi = r => /İŞ\s*ARTI/i.test(String(r.name || ''));
+    const isArtisiMi = r => rotaIsArtisi(r);
     const adEs = (a, b) => B(a).replace(/\s*-\s*/g, '-').replace(/\s*\(İŞ ARTIŞI\)\s*/g, '') === B(b).replace(/\s*-\s*/g, '-');
     const kullanilan = new Set();
+    const mebbisMaliyetler = new Set(okunan.map(g => String(g.maliyet || '')).filter(Boolean));
     const rBul = g => {
       const bos = r => !kullanilan.has(String(r.id));
       if (g.maliyet) { const m = routes.find(r => bos(r) && String(r.mebbisMaliyet || '') === String(g.maliyet)); if (m) return { r: m, neden: 'maliyet no' }; }
-      const serbest = routes.filter(r => bos(r) && !r.mebbisMaliyet);
+      // ihale no'su yazılmamış ya da yazılı no MEBBİS'te artık yoksa (yeni ihale yılı) güzergah no + iş artışı ile eşleşebilir
+      const serbest = routes.filter(r => bos(r) && (!r.mebbisMaliyet || !mebbisMaliyetler.has(String(r.mebbisMaliyet))));
       let ad = serbest.filter(r => String(r.no || '').trim() === String(g.guzNo || '').trim());
       if (ad.length) { const t = ihaleTuru(g) === 'İŞ ARTIŞI'; const d = ad.filter(r => isArtisiMi(r) === t); if (d.length) ad = d; else if (t) ad = []; }
       if (ad.length === 1) return { r: ad[0], neden: 'güzergah no' };
@@ -3891,7 +3894,16 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
   function mebbisTekKarsilastir(v) {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const no = String(v.guzNo || '').trim();
-    const r = routes.find(x => String(x.no || '').trim() === no);
+    // eşleştirme sırası: ihale (maliyet) no → güzergah no + iş artışı → güzergah no (tekse)
+    let r = v.maliyet ? routes.find(x => String(x.mebbisMaliyet || '') === String(v.maliyet)) : null;
+    if (!r) {
+      const ayniNo = routes.filter(x => String(x.no || '').trim() === no);
+      let a = ayniNo.filter(x => !x.mebbisMaliyet);                  // ihale no'su henüz yazılmamış olanlar önce
+      if (!a.length) a = ayniNo;                                       // yeni ihale yılı: eski no yazılı olabilir
+      if (a.length > 1) { const t = a.filter(x => rotaIsArtisi(x) === !!v.isArtisi); if (t.length) a = t; }
+      if (a.length > 1) { alert(`MEBBİS'te açık olan güzergah: ${no}${v.isArtisi ? ' (İŞ ARTIŞI)' : ''}\nProgramda bu numarada birden çok güzergah var ve hangisi olduğu anlaşılamadı.\n\nServis Bilgileri'nde doğru güzergaha İhale No'yu (${v.maliyet || 'MEBBİS Yaklaşık Maliyet No'}) yazın, sonra tekrar deneyin.`); return; }
+      r = a[0] || null;
+    }
     if (!r) { alert(`MEBBİS'te açık olan güzergah: ${no || '(numara okunamadı)'}\nProgramda bu numarada güzergah yok.\n\nÖnce "Güzergahları Programa Aktar" ile güzergahları alın ya da Servis Bilgileri'nden ekleyin.`); return; }
     const hepsi = topluHepsi();
     const progBul = tc => hepsi.find(h => String(h.s.tc || '').trim() === tc);
@@ -4005,7 +4017,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     if (prog.length) { if (typeof refreshAllRouteViews === 'function') refreshAllRouteViews(); try { renderAdayList(); } catch (e) {} try { renderStudentSearch(); } catch (e) {} saveDataToStorage(); }
     const m = document.getElementById('mebbis-tek-modal'); if (m) m.remove();
     if (ekle.length || cikar.length) {
-      if (window.masaustu && window.masaustu.mebbisIsaretle) window.masaustu.mebbisIsaretle({ guzNo: v.guzNo, plaka: v.plaka, ekle, cikar, programSonuc: sonuc, kaydet: true, kapasite: kap > 0 ? kap : 0 });
+      if (window.masaustu && window.masaustu.mebbisIsaretle) window.masaustu.mebbisIsaretle({ guzNo: v.guzNo, plaka: v.plaka, maliyet: v.maliyet || '', ekle, cikar, programSonuc: sonuc, kaydet: true, kapasite: kap > 0 ? kap : 0 });
       else alert('MEBBİS işaretleme sadece masaüstü programında çalışır.\n\n' + sonuc.join('\n'));
     } else alert('Tamamlandı.\n\n' + sonuc.map(x => '• ' + x).join('\n'));
   }
@@ -6306,7 +6318,11 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         <tr>
           <td style="text-align:center; font-weight:bold;">${i+1}</td>
           <td><input type="text" value="${r.no}" style="text-align:center; font-weight:bold;" onchange="guzergahNoDegis(${i}, this.value)"></td>
-          <td><input type="text" value="${r.name}" onchange="routes[${i}].name=this.value.toUpperCase(); syncToplamaYeri(); refreshAllRouteViews();"></td>
+          <td style="background:#f1f5f9;">
+            <input type="text" value="${String(r.mebbisMaliyet || '').replace(/\D/g, '')}" placeholder="—" inputmode="numeric" title="MEBBİS Yaklaşık Maliyet No — yalnız bu sayfada görünür, çıktılarda yazmaz" style="text-align:center; font-size:12px;" onchange="rotaIhaleNoYaz(${i}, this.value)">
+            <label style="display:flex; align-items:center; gap:3px; font-size:10px; font-weight:bold; color:#b45309; margin-top:2px; white-space:nowrap; cursor:pointer;" title="İşaretliyse bütün çıktılarda güzergah adının yanına (İŞ ARTIŞI) yazılır"><input type="checkbox" ${rotaIsArtisi(r) ? 'checked' : ''} onchange="rotaIsArtisiAyarla(${i}, this.checked)" style="width:auto; margin:0;"> İş artışı</label>
+          </td>
+          <td><input type="text" value="${rotaAdEksiz(r)}" onchange="rotaAdYaz(${i}, this.value)"></td>
           <td>
             <select onchange="routes[${i}].vakit=this.value; applyVakitTimeDefaults(routes[${i}]); renderPuantajSheet(); renderOzelEgitimSheet(); renderSeatingPlan(); saveDataToStorage();" style="width:100%; font-weight:bold;">
               <option value="Sabah-Öğlen" ${(r.vakit||'Sabah-Öğlen')==='Sabah-Öğlen'?'selected':''}>Sabah-Öğlen</option>
@@ -6435,6 +6451,34 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     });
   }
 
+  /* İHALE NO ve İŞ ARTIŞI
+     • İhale no = MEBBİS "Yaklaşık Maliyet No" (route.mebbisMaliyet). Yalnız Servis Bilgileri'nde görünür,
+       hiçbir çıktıda yazmaz; MEBBİS eşleştirmesinde ilk bakılan bilgidir.
+     • İş artışı güzergah adının sonunda "(İŞ ARTIŞI)" olarak durur; böylece bütün çıktılarda
+       (puantaj, çizelge, imza sürgüsü, Word/Excel) yazar ve aynı numaralı iki servis karışmaz.
+       Servis Bilgileri'nde ad eksiz gösterilir, ek "İş artışı" kutusundan açılıp kapatılır. */
+  const IS_ARTISI_EK = ' (İŞ ARTIŞI)';
+  function rotaIsArtisi(r) { return /\(\s*İŞ\s*ARTI/i.test(String((r && r.name) || '')); }
+  function rotaAdEksiz(r) { return String((r && r.name) || '').replace(/\s*\(\s*İŞ\s*ARTIŞI\s*\)\s*/gi, ' ').replace(/\s+/g, ' ').trim(); }
+  function rotaAdYaz(i, deger) {
+    const r = routes[i]; if (!r) return;
+    const ia = rotaIsArtisi(r);
+    r.name = String(deger || '').toLocaleUpperCase('tr-TR').replace(/\s*\(\s*İŞ\s*ARTIŞI\s*\)\s*/gi, ' ').replace(/\s+/g, ' ').trim() + (ia ? IS_ARTISI_EK : '');
+    syncToplamaYeri(); refreshAllRouteViews(); saveDataToStorage();
+  }
+  function rotaIsArtisiAyarla(i, acik) {
+    const r = routes[i]; if (!r) return;
+    r.name = rotaAdEksiz(r) + (acik ? IS_ARTISI_EK : '');
+    syncToplamaYeri(); refreshAllRouteViews(); saveDataToStorage();
+  }
+  function rotaIhaleNoYaz(i, deger) {
+    const r = routes[i]; if (!r) return;
+    const v = String(deger || '').replace(/\D/g, '');
+    const baska = v && routes.find(x => x !== r && String(x.mebbisMaliyet || '') === v);
+    if (baska && !confirm(`Bu ihale no (${v}) ${baska.no} NOLU GÜZERGAH'ta da yazılı.\n\nAynı ihale iki güzergahta olamaz; MEBBİS eşleştirmesi karışır. Yine de yazılsın mı?`)) { renderServisList(); return; }
+    r.mebbisMaliyet = v; saveDataToStorage();
+  }
+  window.rotaIsArtisi = rotaIsArtisi; window.rotaAdEksiz = rotaAdEksiz; window.rotaAdYaz = rotaAdYaz; window.rotaIsArtisiAyarla = rotaIsArtisiAyarla; window.rotaIhaleNoYaz = rotaIhaleNoYaz;
   function guzergahAdiSade(route) {
     const no = String((route && route.no) || '').trim();
     let ad = String((route && route.name) || '').trim();
