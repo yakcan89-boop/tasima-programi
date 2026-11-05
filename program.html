@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 11.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 12.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -3508,9 +3508,11 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const rBul = g => {
       const bos = r => !kullanilan.has(String(r.id));
       if (g.maliyet) { const m = routes.find(r => bos(r) && String(r.mebbisMaliyet || '') === String(g.maliyet)); if (m) return { r: m, neden: 'maliyet no' }; }
-      // ihale no'su yazılmamış ya da yazılı no MEBBİS'te artık yoksa (yeni ihale yılı) güzergah no + iş artışı ile eşleşebilir
-      const serbest = routes.filter(r => bos(r) && (!r.mebbisMaliyet || !mebbisMaliyetler.has(String(r.mebbisMaliyet))));
-      let ad = serbest.filter(r => String(r.no || '').trim() === String(g.guzNo || '').trim());
+      // İhale no'su yazılı güzergah BAŞKA bir ihaleyle ASLA plaka/şoför ya da adla eşleşmez (aynı araç iki güzergahta olabilir).
+      // Yalnız aynı güzergah no + iş artışı ile, yazılı ihale no MEBBİS'te bu okumada yoksa (yeni ihale yılı) eşleşebilir.
+      const serbest = routes.filter(r => bos(r) && !r.mebbisMaliyet);
+      const noIcin = routes.filter(r => bos(r) && (!r.mebbisMaliyet || !mebbisMaliyetler.has(String(r.mebbisMaliyet))));
+      let ad = noIcin.filter(r => String(r.no || '').trim() === String(g.guzNo || '').trim());
       if (ad.length) { const t = ihaleTuru(g) === 'İŞ ARTIŞI'; const d = ad.filter(r => isArtisiMi(r) === t); if (d.length) ad = d; else if (t) ad = []; }
       if (ad.length === 1) return { r: ad[0], neden: 'güzergah no' };
       const ps = serbest.filter(r => P(r.plate) && P(r.plate) === P(g.plaka) && B(r.driver) === B(g.sofor));
@@ -3538,7 +3540,15 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     let maliyetYazildi = false;
     okunan.forEach(g => {
       const bulunan = rBul(g); let r = bulunan ? bulunan.r : null;
-      if (r) { kullanilan.add(String(r.id)); if (g.maliyet && String(r.mebbisMaliyet || '') !== String(g.maliyet)) { r.mebbisMaliyet = String(g.maliyet); maliyetYazildi = true; } }
+      const zayif = !!(bulunan && bulunan.neden !== 'maliyet no' && bulunan.neden !== 'güzergah no');   // plaka+şoför / ad: tahmin
+      const degisOnce = degis.length;
+      if (r) {
+        kullanilan.add(String(r.id));
+        if (g.maliyet && String(r.mebbisMaliyet || '') !== String(g.maliyet)) {
+          if (zayif) degis.push({ tip: 'ihale', r, deger: String(g.maliyet), eski: r.mebbisMaliyet || '' });   // tahmini eşleşmede onaysız yazılmaz
+          else { r.mebbisMaliyet = String(g.maliyet); maliyetYazildi = true; }
+        }
+      }
       if (!r) {      // programda yok → MEBBİS bilgileriyle oluşturulsun
         // MEBBİS'ten yalnızca güzergah no, plaka, şoför adı ve vakit (öğrenci alma saatinden) alınır
         r = { id: null, no: String(g.guzNo || ''), name: bolgeAdi(g) + (ihaleTuru(g) ? ' (İŞ ARTIŞI)' : ''), mebbisMaliyet: String(g.maliyet || ''), driver: formatNameCase(g.sofor || ''), rehberPersonel: '', vakit: vakitBul(g),
@@ -3554,7 +3564,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       if (mAd && (!String(r.name || '').trim() || B(r.name).replace(/\s*-\s*/g, '-') !== B(mAd).replace(/\s*-\s*/g, '-'))) degis.push({ tip: 'ad', r, ad: mAd, eski: r.name });
       if (g.sofor && B(r.driver) !== B(g.sofor)) degis.push({ tip: 'sofor', r, deger: formatNameCase(g.sofor), eski: r.driver });
       if (g.plaka && P(r.plate) !== P(g.plaka)) degis.push({ tip: 'plaka', r, deger: plakaYaz(g.plaka), eski: r.plate });
-      if (bulunan && bulunan.neden !== 'maliyet no' && bulunan.neden !== 'güzergah no') f.push(`MEBBİS'teki <b>${esc(g.baslik || g.guzNo)}</b> programdaki güzergahla <b>${bulunan.neden}</b> ile eşleştirildi — doğruysa uygulayın`);
+      if (bulunan && bulunan.neden !== 'maliyet no' && bulunan.neden !== 'güzergah no') f.push(`⚠️ MEBBİS'teki <b>${esc(g.baslik || g.guzNo)}</b> programdaki <b>${esc(guzergahTamAdi(r))}</b> ile yalnız <b>${bulunan.neden}</b> benzerliğinden eşleştirildi — bu güzergahın değişiklikleri <b>işaretsiz</b> geldi. Aynı güzergahsa işaretleyin; değilse Servis Bilgileri'nde doğru güzergaha İhale No'yu yazıp tekrar alın.`);
       const mv = vakitBul(g);
       if (mv && String(r.vakit || '').trim() && r.vakit !== mv) f.push(`Vakit: programda <b>${esc(r.vakit)}</b>, MEBBİS'te <b>${mv}</b> (öğrenci alma ${esc(g.alma)})`);
       arac.push({ g, r, f });
@@ -3573,6 +3583,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         if (degis.some(d => d.s === x.s)) return;
         degis.push({ tip: 'tasi', s: x.s, eskiRid: x.rid, k, r, tcEkle: neden === 'ad' });
       });
+      if (zayif) for (let i = degisOnce; i < degis.length; i++) degis[i].kapali = true;
     });
     gri.forEach((o, tc) => { if (yesilTc.has(tc)) gri.delete(tc); });
     const mebbisteYok = [];
@@ -3595,6 +3606,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       if (d.tip === 'yeni') t = `<b>${esc(d.k.name)}</b> (${esc(d.k.grade)}) programda yok → <b>${rAd(d.r)}</b> güzergahına eklenecek <span style="color:#b45309">(cinsiyet ve okul no boş kalır)</span>`;
       if (d.tip === 'tc') t = `<b>${esc(d.s.name)}</b>: T.C. kimlik no programa yazılacak`;
       if (d.tip === 'ad') t = `<b>${esc(d.r.no)} NOLU GÜZERGAH</b> adı: ${d.eski ? '<s>' + esc(d.eski) + '</s> → ' : ''}<b>${esc(d.ad)}</b> (MEBBİS)`;
+      if (d.tip === 'ihale') t = `<b>${esc(d.r.no)} NOLU</b> İhale No: ${d.eski ? '<s>' + esc(d.eski) + '</s> → ' : ''}<b>${esc(d.deger)}</b> (MEBBİS)`;
       if (d.tip === 'no') t = `Güzergah no: programda <s>${esc(d.eski || '—')}</s> → MEBBİS'te <b>${esc(d.no)}</b>${d.tur ? ' (' + esc(d.tur) + ')' : ''}`;
       if (d.tip === 'sofor') t = `<b>${esc(d.r.no)} NOLU</b> şoför: <s>${esc(d.eski || '—')}</s> → <b>${esc(d.deger)}</b> (MEBBİS) <span style="color:#0e7490">— bu aydan geçerli; geçmiş aylar eski şoförle kalır</span>`;
       if (d.tip === 'plaka') t = `<b>${esc(d.r.no)} NOLU</b> plaka: <s>${esc(d.eski || '—')}</s> → <b>${esc(d.deger)}</b> (MEBBİS) <span style="color:#0e7490">— bu aydan geçerli; geçmiş aylar eski plakayla kalır</span>`;
@@ -3830,6 +3842,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     if (typeof guzergahlariSirala === 'function') guzergahlariSirala();
     secili.forEach(d => {
       if (d.tip === 'guzergah') return;
+      if (d.tip === 'ihale') { d.r.mebbisMaliyet = d.deger; sonuc.push(`${d.r.no} NOLU GÜZERGAH İhale No: ${d.deger}`); return; }
       if (d.tip === 'no') { sonuc.push(`Güzergah no: ${d.eski || '—'} → ${d.no}`); d.r.no = d.no; return; }
       if (d.tip === 'sofor') { rotaBilgiDegistir(d.r, 'driver', d.deger); sonuc.push(`${d.r.no} NOLU şoför: ${d.deger}`); return; }
       if (d.tip === 'plaka') { rotaBilgiDegistir(d.r, 'plate', d.deger); sonuc.push(`${d.r.no} NOLU plaka: ${d.deger}`); return; }
