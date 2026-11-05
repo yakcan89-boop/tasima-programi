@@ -2,18 +2,18 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "10.11.2026",
+      "surum": "11.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "MEBBİS güzergahları tek tek: seçilen güzergahın öğrencileri, şoförü, plakası ve adı ayrı onaylanır (Uygula ve sıradaki ▶ / Atla / Durdur). MEBBİS'te bu araçta olmayan öğrenci silinmez; başka araçtaysa dokunulmaz, isterseniz aday listesine alınır."
+      "notlar": "Servis Bilgileri'nde İhale No (MEBBİS Yaklaşık Maliyet No) ve İş artışı kutusu; ihale no yalnız bu sayfada görünür, iş artışı bütün çıktılarda güzergah adının yanında yazar. MEBBİS eşleştirmesi: ihale no → güzergah no + iş artışı → ad → şoför/plaka. Yeni ihale yılında güzergahlar numarasıyla bulunur."
     }
   },
   "kabuk": {
-    "surum": "1.1.13",
-    "notlar": "MEBBİS'te güzergahlar seçilerek alınır ve yerleştirilir: seçilen güzergahlar tek tek açılır, her biri ayrı onaylanır, kaldığınız yerden devam edilir. Pencere açıkken yalnız o güzergah alınabilir.",
+    "surum": "1.1.14",
+    "notlar": "MEBBİS'te güzergah ihale (maliyet) numarasıyla tanınır: aynı araç iki güzergahta olsa da açık pencere doğru güzergaha bağlanır; aynı güzergahta araç değişince biten araç gri bilgi olarak görünür, kullanımdaki araç okunur.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "11eab139c68d260b8a7a245e6e94fa37123780184d25bdb4e5d21cb507d3adbc"
+        "sha256": "55e718af0e89611e72dee918c6594fa60466148d1e93ee68bb9e143a3aadc9a6"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
@@ -21,7 +21,7 @@
       },
       "preload_mebbis.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload_mebbis.js",
-        "sha256": "33b5aaaa410a1d9f8d9865491aee3239560b48ca3af6b07522cd5ba6ac34e8c9"
+        "sha256": "169d3a7e5885f7fae345ffc4b2272ad3b172985234035f7c91eea03ec9afaa3e"
       },
       "onizle.html": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/onizle.html",
