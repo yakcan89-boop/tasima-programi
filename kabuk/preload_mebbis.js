@@ -103,7 +103,7 @@ const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&am
 // MEBBİS başlığı: "Yaklaşık Maliyet No: 2922090 - 84. NOLU GÜZERGAH (ANA İHALE) ⓘ" → "Maliyet No 2922090 · Ana İhale"
 const altYazi = b => { b = String(b || ''); const m = (b.match(/Maliyet\s*No\s*:?\s*(\d+)/i) || [])[1], t = (b.match(/\(([^)]+)\)/) || [])[1];
   const tur = t ? t.toLocaleLowerCase('tr-TR').replace(/(^|\s)(\S)/g, (x, a, c) => a + c.toLocaleUpperCase('tr-TR')) : '';
-  return [m ? 'Maliyet No ' + m : '', tur].filter(Boolean).join(' · ') || b; };
+  return [m ? 'İhale No ' + m : '', tur].filter(Boolean).join(' · ') || b; };
 const tarihYaz = iso => { try { const d = new Date(iso); return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); } catch (x) { return ''; } };
 async function secAc(mod) {
   if (!document.body) return;
@@ -126,7 +126,8 @@ async function secAc(mod) {
     const satir = g => `<label style="display:flex;gap:8px;align-items:center;padding:5px 6px;border-bottom:1px solid #eef2f7;cursor:pointer;${biten[g.anahtar] ? 'background:#f0fdf4' : ''}">
         <input type="checkbox" data-an="${esc(g.anahtar)}" ${secili.has(g.anahtar) ? 'checked' : ''}>
         <b style="flex:0 0 38px;font-size:14px">${esc(g.guzNo)}</b>
-        <span style="flex:1;min-width:0"><span style="color:#0f172a">${esc(g.plaka)}</span> · ${esc(g.sofor)}<br><span style="color:#94a3b8;font-size:11.5px">${esc(altYazi(g.baslik))}</span></span>
+        <span style="flex:1;min-width:0"><span style="color:#0f172a">${esc(g.plaka)}</span> · ${esc(g.sofor)}<br><span style="color:#94a3b8;font-size:11.5px">${esc(altYazi(g.baslik))}</span>
+        ${(g.bitenAraclar || []).map(b => `<br><span style="color:#94a3b8;font-size:11px">⏹ ${esc(b.plaka)} · ${esc(b.sofor)}${b.bitT ? ' · ' + esc(String(b.bitT).split(' ')[0]) + "'de bitti" : ' · bitti'}</span>`).join('')}</span>
         ${biten[g.anahtar] ? `<span style="color:#15803d;font-size:11.5px;white-space:nowrap" title="Bu işlem daha önce tamamlandı">✔ ${esc(tarihYaz(biten[g.anahtar]))}</span>` : ''}</label>`;
     k.innerHTML = `<div style="background:#fff;border-radius:12px;width:100%;max-width:600px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,.35);overflow:hidden">
       <div style="display:flex;background:#0e7490">
@@ -175,6 +176,21 @@ async function secAc(mod) {
   ciz();
 }
 ipcRenderer.on('tasima-guzergah-sec', (e, mod) => { if (MEBBIS_SAYFASI && window.top === window) secAc(mod === 'yer' ? 'yer' : 'al'); });
+/* ✏️'ye (ya da satırda herhangi bir yere) basılınca o satırın kimliği sayfaya yazılır.
+   Program açık pencerenin hangi güzergaha ait olduğunu plakadan değil buradan anlar
+   (aynı araç iki güzergahta olabilir). Kimlik: ihale (maliyet) no + güzergah no + plaka. */
+if (MEBBIS_SAYFASI) document.addEventListener('click', ev => {
+  try {
+    const tr = ev.target && ev.target.closest ? ev.target.closest('tr') : null; if (!tr) return;
+    const tx = el => String((el && (el.innerText || el.textContent)) || '').replace(/\s+/g, ' ').trim();
+    const tds = [...tr.children].filter(c => c.tagName === 'TD'); const ct = tds.map(tx);
+    const pi = ct.findIndex(x => /^\d{2}\s*[A-ZÇĞİÖŞÜ]{1,3}\s*\d{2,5}$/.test(x)); if (pi < 0 || tds.length < pi + 6) return;
+    const hepsi = [...document.querySelectorAll('tr')]; let k = hepsi.indexOf(tr) - 1, maliyet = '', no = '', baslik = '';
+    for (; k >= 0; k--) { const t = tx(hepsi[k]); const m = t.match(/(\d+)\s*\.?\s*NOLU\s+G[ÜU]ZERGAH/i); const n = [...hepsi[k].children].filter(c => /^T[DH]$/.test(c.tagName)).length;
+      if (m && n <= 3) { no = m[1]; baslik = t; maliyet = (t.match(/Maliyet\s*No\s*:?\s*(\d+)/i) || [])[1] || ''; break; } }
+    document.documentElement.setAttribute('data-tasima-son', JSON.stringify({ maliyet, no, baslik, plaka: ct[pi], basT: ct[pi + 2] || '', t: Date.now() }));
+  } catch (x) {}
+}, true);
 if (MEBBIS_SAYFASI && window.top === window) window.addEventListener('DOMContentLoaded', () => {
   kur();
   let z = null;

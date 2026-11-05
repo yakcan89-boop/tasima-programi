@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.13';
+const KABUK_SURUM = '1.1.14';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -632,6 +632,7 @@ async function pencereKapat(js, wcAna) {
 async function guzergahAcOku(js, wcAna, g) { const m = await guzergahAc(js, wcAna, g); await pencereKapat(js, wcAna); return m; }
 async function guzergahAc(js, wcAna, g) {
   if (await js('__tsr.modalKok()')) await pencereKapat(js, wcAna);
+  await js(`document.documentElement.setAttribute('data-tasima-son', ${JSON.stringify(JSON.stringify({ maliyet: g.maliyet || '', no: g.guzNo || '', baslik: g.baslik || '', plaka: g.plaka || '', basT: g.basT || '', t: Date.now() }))})`).catch(() => {});
   let tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${g.i}"]'); if (!d) return false; d.click(); return true; })()`);
   if (!tik) { await js('__tsr.liste()'); tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${g.i}"]'); if (!d) return false; d.click(); return true; })()`); }
   let m = null, oncekiSay = -1;
@@ -665,6 +666,7 @@ async function mebbisServisOku(e, secim) {
       dialog.showMessageBox({ type: 'warning', message: 'Güzergah satırları bulunamadı.', detail: 'Taşıma Servis İşlemleri sayfasında Sorgula dedikten sonra tekrar deneyin.' + (yol ? '\n\nSayfa kaydedildi: ' + yol : '') });
       return;
     }
+    liste = aktifSatirlar(liste);
     if (secim) liste = liste.filter(g => secim.has(guzAnahtar(g)));
     const sonuc = [], uyarilar = [];
     // önce her güzergahın ⓘ bölge bilgisini al (pencere açmadan)
@@ -701,7 +703,33 @@ const __plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ''
    Kalabalık okullarda bütün güzergahları bir anda okumak yerine seçilen güzergahlar
    tek tek açılır, her biri ayrı onaylanır. Hangi güzergahın bittiği dosyada tutulur;
    kapatıp açınca kaldığı yerden devam edilebilir. */
-const guzAnahtar = g => g.maliyet ? 'm' + g.maliyet : 'g' + g.guzNo + '|' + __plk(g.plaka);
+const guzAnahtar = g => (g.maliyet ? 'm' + g.maliyet : 'g' + g.guzNo) + '|' + __plk(g.plaka);
+const isArtisiMi = g => /İŞ\s*ARTI|IS\s*ARTI/i.test(String((g && g.baslik) || ''));
+/* Aynı ihalede araç değişince MEBBİS iki satır gösterir: biten aracın ✏️'si yoktur.
+   Kullanımdaki (✏️ olan) satır esas alınır, biten araç yalnız bilgi olarak eklenir. */
+function aktifSatirlar(L) {
+  const out = [];
+  (L || []).forEach(g => {
+    const kardes = L.filter(x => x !== g && x.maliyet && x.maliyet === g.maliyet && x.guzNo === g.guzNo);
+    if (!g.duzVar && kardes.some(x => x.duzVar)) return;            // biten araç: aktif satıra bilgi olarak eklenir
+    const biten = g.duzVar ? kardes.filter(x => !x.duzVar).map(x => ({ plaka: x.plaka, sofor: x.sofor, bitT: x.bitT })) : [];
+    out.push(Object.assign({}, g, { bitenAraclar: biten }));
+  });
+  return out;
+}
+/* Açık ✏️ penceresinin hangi satıra ait olduğu: önce kullanıcının/programın bastığı satır
+   (sayfaya yazılan data-tasima-son), yoksa plaka yalnız bir satırda geçiyorsa o satır. */
+async function acikGuzergahBul(js, L, m) {
+  if (!m) return null;
+  let son = null; try { son = JSON.parse(await js("document.documentElement.getAttribute('data-tasima-son') || 'null'")); } catch (x) {}
+  const ayni = (L || []).filter(g => __plk(g.plaka) === __plk(m.plaka));
+  if (son && son.plaka && __plk(son.plaka) === __plk(m.plaka)) {
+    const g = ayni.find(g => (!son.maliyet || g.maliyet === son.maliyet) && (!son.no || String(g.guzNo) === String(son.no)));
+    if (g) return g;
+  }
+  return ayni.length === 1 ? ayni[0] : null;
+}
+const BELIRSIZ = plaka => ({ type: 'warning', message: 'Açık pencerenin hangi güzergaha ait olduğu anlaşılamadı.', detail: `Bu araç (${plaka || '—'}) MEBBİS'te birden çok güzergahta görünüyor. Pencereyi kapatıp istediğiniz güzergahın ✏️ düğmesine yeniden basın, sonra tekrar deneyin.` });
 const ilerlemeYol = () => path.join(yollar().kok, 'mebbis_ilerleme.json');
 function ilerlemeOku() { try { const v = JSON.parse(fs.readFileSync(ilerlemeYol(), 'utf8')); return v && typeof v === 'object' ? v : {}; } catch (x) { return {}; } }
 function ilerlemeYaz(v) { try { fs.mkdirSync(path.dirname(ilerlemeYol()), { recursive: true }); fs.writeFileSync(ilerlemeYol(), JSON.stringify(v, null, 1), 'utf8'); } catch (x) {} }
@@ -725,7 +753,7 @@ ipcMain.handle('mebbis-guzergah-liste', async e => {
     let okul = ''; try { okul = await js('__tsr.okul()'); } catch (x) {}
     const ilerleme = ilerlemeOku();
     Object.keys(ilerleme).forEach(k => { if (ilerleme[k] && ilerleme[k].okul && okul && ilerleme[k].okul !== okul) delete ilerleme[k]; });   // başka okulun turu
-    return { liste: (L || []).map(g => ({ anahtar: guzAnahtar(g), guzNo: g.guzNo, baslik: g.baslik, plaka: g.plaka, sofor: g.sofor, kapasite: g.kapasite })), okul, ilerleme };
+    return { liste: aktifSatirlar(L).map(g => ({ anahtar: guzAnahtar(g), guzNo: g.guzNo, baslik: g.baslik, plaka: g.plaka, sofor: g.sofor, kapasite: g.kapasite, bitenAraclar: g.bitenAraclar })), okul, ilerleme };
   } catch (x) { return { hata: x.message }; }
 });
 ipcMain.on('mebbis-ilerleme-sifirla', (e, mod) => { const v = ilerlemeOku(); delete v[mod]; ilerlemeYaz(v); });
@@ -805,8 +833,8 @@ ipcMain.on('mebbis-bu-guzergah-al', async e => {
     }
     if (!m || !m.ogrenciler || !m.ogrenciler.length) { dialog.showMessageBox({ type: 'info', message: 'Açık bir güzergah penceresi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri'nde bir güzergahın ✏️ penceresini açın, sonra tekrar deneyin." }); return; }
     const L = await js('__tsr.liste()');
-    const g = (L || []).find(x => __plk(x.plaka) === __plk(m.plaka));
-    if (!g) { dialog.showMessageBox({ type: 'warning', message: 'Açık pencerenin hangi güzergaha ait olduğu bulunamadı.', detail: `Plaka: ${m.plaka || '—'}` }); return; }
+    const g = await acikGuzergahBul(js, L, m);
+    if (!g) { dialog.showMessageBox(BELIRSIZ(m.plaka)); return; }
     if (g.maliyet) { try { g.bolge = await js(`__tsr.bolgeler(${JSON.stringify(g.maliyet)})`); } catch (x) {} }
     let okul = ''; try { okul = await js('__tsr.okul()'); } catch (x) {}
     const uyarilar = [];
@@ -825,44 +853,44 @@ async function yerlestirGoster(ctx, mod) {
   try {
     let L = await js('__tsr.liste()');
     if (!L || !L.length) { dialog.showMessageBox({ type: 'info', message: 'Güzergah listesi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasında Sorgula deyin, güzergahlar görününce tekrar deneyin." }); return; }
+    L = aktifSatirlar(L);
     let m = (await js('__tsr.modalKok()')) ? await js('__tsr.modalOku()') : null;
-    let n = -1, ac = -1;
+    let gSec = null, ac = null;
     const sonGeldi = async detay => {
       const r = await dialog.showMessageBox(anaPencere, { type: 'info', message: ctx.kuyruk ? 'Seçilen güzergahların sonuna gelindi.' : 'Son güzergaha gelindi.', detail: detay + ' Başka araçtan çıkarıldığı için eklenemeyen öğrenci kaldıysa baştan bir tur daha yapın (ikinci turda eklenir).', buttons: ['Baştan bir tur daha', 'Bitir'], defaultId: 1, cancelId: 1 });
       if (r.response === 0) return yerlestirGoster(ctx, 'bastan');
       yerlestirCtx = null;
     };
+    const aciktaki = m ? await acikGuzergahBul(js, L, m) : null;
     if (ctx.kuyruk) {
       if (mod === 'siradaki') ctx.pos++;
       if (mod === 'bastan') ctx.pos = 0;
-      let t = -1;
-      while (ctx.pos < ctx.kuyruk.length && ((t = L.findIndex(g => guzAnahtar(g) === ctx.kuyruk[ctx.pos])) < 0 || !L[t].duzVar)) ctx.pos++;
+      let t = null;
+      while (ctx.pos < ctx.kuyruk.length && (!(t = L.find(g => guzAnahtar(g) === ctx.kuyruk[ctx.pos])) || !t.duzVar)) ctx.pos++;
       if (ctx.pos >= ctx.kuyruk.length) return sonGeldi(`Seçilen ${ctx.kuyruk.length} güzergah sırayla açıldı.`);
-      if (m && m.plaka && __plk(m.plaka) === __plk(L[t].plaka)) n = t; else ac = t;
+      if (aciktaki && guzAnahtar(aciktaki) === guzAnahtar(t)) gSec = t; else ac = t;
     } else {
-      if (m && m.plaka && mod !== 'siradaki' && mod !== 'bastan') n = L.findIndex(g => __plk(g.plaka) === __plk(m.plaka));
-      if (n < 0) {
-        if (mod === 'bastan') ac = 0;
-        else {
-          const son = (m && m.plaka) || ctx.sonPlaka || '';
-          const i = son ? L.findIndex(g => __plk(g.plaka) === __plk(son)) : -1;
-          ac = mod === 'siradaki' ? i + 1 : Math.max(0, i);
-        }
-        if (ac >= L.length) return sonGeldi('Bütün güzergahlar sırayla açıldı.');
+      if (m && mod !== 'siradaki' && mod !== 'bastan') {
+        if (!aciktaki) { dialog.showMessageBox(BELIRSIZ(m.plaka)); return; }
+        gSec = aciktaki;
+      } else {
+        const i = mod === 'bastan' ? -1 : (ctx.sonAnahtar ? L.findIndex(g => guzAnahtar(g) === ctx.sonAnahtar) : -1);
+        const k = mod === 'bastan' ? 0 : (mod === 'siradaki' ? i + 1 : Math.max(0, i));
+        if (k >= L.length) return sonGeldi('Bütün güzergahlar sırayla açıldı.');
+        ac = L[k];
       }
     }
-    if (n < 0) {
-      const g = L[ac]; if (!g || !g.duzVar) { dialog.showMessageBox({ type: 'warning', message: `${g ? g.guzNo : ''} nolu güzergahın düzenle (✏️) düğmesi bulunamadı.` }); return; }
+    if (!gSec) {
+      const g = ac; if (!g || !g.duzVar) { dialog.showMessageBox({ type: 'warning', message: `${g ? g.guzNo : ''} nolu güzergahın düzenle (✏️) düğmesi bulunamadı.` }); return; }
       m = await guzergahAc(js, ctx.ana, g);
       if (!m) { dialog.showMessageBox({ type: 'warning', message: `${g.guzNo} nolu güzergahın öğrenci penceresi okunamadı.`, detail: 'Pencereyi kendiniz açıp tekrar 📤 düğmesine basın.' }); return; }
-      n = ac;
+      gSec = g;
     }
-    L = await js('__tsr.liste()').catch(() => L) || L;
-    const g = L.find(x => __plk(x.plaka) === __plk(m.plaka)) || L[n] || {};
+    const g = gSec;
     const sira = ctx.kuyruk ? ctx.pos : L.indexOf(g);
-    ctx.sonPlaka = m.plaka; ctx.sonAnahtar = g.guzNo ? guzAnahtar(g) : ''; ctx.aktif = true; yerlestirCtx = ctx;
+    ctx.sonPlaka = m.plaka; ctx.sonAnahtar = guzAnahtar(g); ctx.aktif = true; yerlestirCtx = ctx;
     sonMebbis = { wc: hedef(), ana: ctx.ana };
-    const veri = { guzNo: g.guzNo || '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite || '', maliyet: g.maliyet || '', yon: 'm', sira: sira + 1, toplam: ctx.kuyruk ? ctx.kuyruk.length : L.length, siradakiVar: true };
+    const veri = { guzNo: g.guzNo || '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite || '', maliyet: g.maliyet || '', isArtisi: isArtisiMi(g), baslik: g.baslik || '', yon: 'm', sira: sira + 1, toplam: ctx.kuyruk ? ctx.kuyruk.length : L.length, siradakiVar: true };
     anaPencere.show(); anaPencere.focus();
     await anaPencere.webContents.executeJavaScript(`mebbisTekKarsilastir(${JSON.stringify(veri)})`);
   } catch (x) { dialog.showErrorBox('Yerleştirme', x.message); }
@@ -1019,8 +1047,9 @@ ipcMain.on('mebbis-tek-karsilastir', async e => {
     const m = await wc.executeJavaScript('__tsr.modalOku()');
     if (!m || !m.ogrenciler.length) { dialog.showMessageBox({ type: 'info', message: 'Açık bir güzergah penceresi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri'nde bir güzergahın ✏️ (Servis Bilgisi Düzenle) penceresini açın, sonra tekrar deneyin." }); return; }
     const L = await wc.executeJavaScript('__tsr.liste()');
-    const g = (L || []).find(x => __plk(x.plaka) === __plk(m.plaka));
-    const veri = { guzNo: g ? g.guzNo : '', plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g ? g.kapasite : '', maliyet: g ? g.maliyet : '' };
+    const g = await acikGuzergahBul(c => wc.executeJavaScript(c), L, m);
+    if (!g) { dialog.showMessageBox(BELIRSIZ(m.plaka)); return; }
+    const veri = { guzNo: g.guzNo, plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite, maliyet: g.maliyet, isArtisi: isArtisiMi(g), baslik: g.baslik };
     anaPencere.show(); anaPencere.focus();
     const var_ = await anaPencere.webContents.executeJavaScript(`typeof mebbisTekKarsilastir === 'function'`);
     if (!var_) { dialog.showMessageBox(anaPencere, { type: 'warning', message: 'Bu program sürümü tek güzergah karşılaştırmasını bilmiyor.', detail: 'Programı güncelleyin.' }); return; }
@@ -1036,6 +1065,8 @@ const ISARETLE_JS = plan => `(async () => {
   const plakaEl = document.querySelector('[id$="txtPlaka"]');
   const plk = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\\s+/g, '');
   if (plakaEl && plan.plaka && plk(plakaEl.value) !== plk(plan.plaka)) return { hata: 'plaka', acik: plakaEl.value };
+  let son = null; try { son = JSON.parse(document.documentElement.getAttribute('data-tasima-son') || 'null'); } catch (e) {}
+  if (plan.maliyet && son && son.maliyet && son.maliyet !== plan.maliyet) return { hata: 'ihale', acik: (son.no || '') + ' (ihale no ' + son.maliyet + ')' };
   const satir = tc => [...kok.querySelectorAll('tr')].find(tr => { const td = tr.querySelector('td'); return td && tx(td) === tc; });
   const durum = b => { try { return JSON.parse(b.querySelector('input[id$="_ClientState"]').value).checked === true; } catch (e) { return null; } };
   const sonuc = { tamam: [], olmadi: [] };
@@ -1126,7 +1157,7 @@ ipcMain.on('mebbis-isaretle', async (e, plan) => {
     return;
   }
   if (r && r.hata) {
-    dialog.showMessageBox(anaPencere, { type: 'warning', message: 'MEBBİS\'te işaretler ayarlanamadı.', detail: r.hata === 'pencere' ? "Güzergahın ✏️ penceresi kapanmış. Açıp tekrar karşılaştırın." : r.hata === 'plaka' ? `Şu an açık olan pencere başka bir araç (${r.acik}). Doğru güzergahın penceresini açıp tekrar karşılaştırın.` : r.hata });
+    dialog.showMessageBox(anaPencere, { type: 'warning', message: 'MEBBİS\'te işaretler ayarlanamadı.', detail: r.hata === 'pencere' ? "Güzergahın ✏️ penceresi kapanmış. Açıp tekrar karşılaştırın." : r.hata === 'plaka' ? `Şu an açık olan pencere başka bir araç (${r.acik}). Doğru güzergahın penceresini açıp tekrar karşılaştırın.` : r.hata === 'ihale' ? `Şu an açık olan pencere başka bir güzergaha ait: ${r.acik}. Aynı araç birden çok güzergahta olabilir; doğru güzergahın ✏️ penceresini açıp tekrar karşılaştırın.` : r.hata });
     return;
   }
   if (w && !w.isDestroyed()) { w.show(); w.focus(); }
