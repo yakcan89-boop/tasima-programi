@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 09.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 10.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -3578,9 +3578,12 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       const tc = String(s.tc || '').trim();
       if (tc && yesilTc.has(tc)) return;
       if (degis.some(d => d.s === s)) return;
-      mebbisteYok.push({ s, r: routes.find(z => String(z.id) === String(rid)) });
+      const rr = routes.find(z => String(z.id) === String(rid));
+      const a = arac.find(x => x.r === rr), o = tc && a ? (a.g.ogrenciler || []).find(x => x.tc === tc) : null;
+      // kirmizi: MEBBİS'te başka bir araçta · gri: hiçbir araçta değil · liste: okulun taşınan listesinde yok · tcyok: programda T.C. yok
+      mebbisteYok.push({ s, r: rr, durum: !tc ? 'tcyok' : !o ? 'liste' : o.durum === 'kirmizi' ? 'kirmizi' : 'gri' });
     }));
-    mebbisServisSon = { degis };
+    mebbisServisSon = { degis, mebbisteYok, tur: v.sira ? { sira: v.sira, toplam: v.toplam } : null };
     if (maliyetYazildi) { try { saveDataToStorage(); } catch (e) {} }
     const rAd = r => r ? esc(guzergahTamAdi(r)) : 'aday listesi';
     const satir = (d, i) => {
@@ -3611,24 +3614,31 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     html += bolum('Uygulanacak değişiklikler (işaretliler uygulanır)', degis.map(satir).join(''), '#0e7490');
     html += bolum('Eşleştirme notları ve vakit farkları',
       arac.filter(a => a.f.length).map(a => `<div style="padding:3px 0"><b>${esc(a.g.guzNo)}:</b> ${a.f.join(' · ')}</div>`).join(''), '#b45309');
-    html += bolum('Programda bu güzergahta ama MEBBİS\'te hiçbir araçta yok — silinmez, kontrol edin',
-      mebbisteYok.map(m => `<div style="padding:3px 0">• <b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}${String(m.s.tc || '').trim() ? '' : ' <span style="color:#b45309">(programda T.C. yok)</span>'}</div>`).join(''), '#b91c1c');
+    const yokAcik = { kirmizi: "MEBBİS'te <b>başka bir araçta</b> — o güzergah alınınca oraya taşınır; şimdilik dokunulmaz", gri: "MEBBİS'te <b>hiçbir araçta değil</b>", liste: "MEBBİS'te okulun <b>taşınan öğrenci listesinde yok</b>", tcyok: '<span style="color:#b45309">programda T.C. yok, eşleştirilemedi</span>' };
+    html += bolum('Programda bu güzergahta ama MEBBİS\'te bu araçta değil — <u>hiçbiri silinmez</u>; isterseniz aday listesine alın',
+      mebbisteYok.map((m, i) => (m.durum === 'gri' || m.durum === 'liste')
+        ? `<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid #fee2e2"><input type="checkbox" data-mdy="${i}" style="margin-top:3px"><span><b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}: ${yokAcik[m.durum]} → <b>aday listesine al</b></span></label>`
+        : `<div style="padding:4px 0">• <b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}: ${yokAcik[m.durum]}</div>`).join(''), '#b91c1c');
     html += bolum('MEBBİS\'te hiçbir araca yerleştirilmemiş öğrenciler',
       [...gri.values()].map(o => `<div style="padding:3px 0">• ${esc(formatNameCase(o.ad))} (${esc(o.sinif)})</div>`).join(''), '#6b7280');
     html += bolum('Programda bulunamayan güzergahlar — atlandı',
       yok.map(g => `<div style="padding:3px 0">• ${esc(g.baslik || g.guzNo)} · ${esc(g.plaka)} · ${esc(formatNameCase(g.sofor))}</div>`).join(''), '#b91c1c');
     html += bolum('Uyarılar', (v.uyarilar || []).map(u => `<div style="padding:3px 0">• ${esc(u)}</div>`).join(''), '#b91c1c');
-    if (!degis.length) html += `<div style="margin-top:14px;padding:10px;background:#ecfdf5;border-radius:8px;color:#065f46;font-weight:700">✅ Güzergahlardaki öğrenciler MEBBİS ile aynı. Uygulanacak değişiklik yok.</div>`;
+    const adayaVar = mebbisteYok.some(m => m.durum === 'gri' || m.durum === 'liste');
+    if (!degis.length) html += `<div style="margin-top:14px;padding:10px;background:#ecfdf5;border-radius:8px;color:#065f46;font-weight:700">✅ ${v.sira ? 'Bu güzergahta' : 'Güzergahlardaki'} öğrenciler, şoför, plaka ve ad MEBBİS ile aynı. Uygulanacak değişiklik yok.</div>`;
+    const tur = !!(v.sira && v.siradakiVar && window.masaustu && window.masaustu.mebbisServisSiradaki);
+    const sonGuz = tur && v.sira >= v.toplam;
     let m = document.getElementById('mebbis-servis-modal');
     if (m) m.remove();
     m = document.createElement('div'); m.id = 'mebbis-servis-modal';
     m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
     m.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:820px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35)">
-      <div style="padding:14px 18px;background:#0e7490;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">🌐 MEBBİS Güzergah Karşılaştırması</div>
+      <div style="padding:14px 18px;background:#0e7490;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px;display:flex;justify-content:space-between;gap:10px"><span>🌐 MEBBİS Güzergah Karşılaştırması${v.sira ? ` — ${esc((okunan[0] && okunan[0].guzNo) || '')} NOLU GÜZERGAH` : ''}</span>${v.sira ? `<span style="background:#fff;color:#0e7490;border-radius:12px;padding:1px 10px;font-size:13.5px">${v.sira}. güzergah / ${v.toplam}</span>` : ''}</div>
       <div style="padding:14px 18px;overflow:auto">${html}</div>
-      <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
-        ${degis.length ? `<button type="button" onclick="mebbisServisUygula()" style="background:#0e7490;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Uygula</button>` : ''}
-        <button type="button" onclick="document.getElementById('mebbis-servis-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
+      <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+        ${degis.length || adayaVar ? `<button type="button" onclick="mebbisServisUygula()" style="background:#0e7490;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">${tur ? (sonGuz ? 'Seçilenleri Uygula ve bitir' : 'Seçilenleri Uygula ve sıradaki ▶') : 'Seçilenleri Uygula'}</button>` : ''}
+        ${tur ? `<button type="button" onclick="mebbisServisTurGec(${degis.length || adayaVar ? 'false' : 'true'})" title="${degis.length || adayaVar ? 'Bu güzergahı uygulamadan geç (bitmedi sayılır, sonra tekrar seçebilirsiniz)' : 'Bu güzergah tamam'}" style="background:#b45309;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">${degis.length || adayaVar ? 'Atla' : 'Tamam'}${sonGuz ? '' : ', sıradaki ▶'}</button>` : ''}
+        <button type="button" onclick="${tur ? 'mebbisServisTurDur()' : "document.getElementById('mebbis-servis-modal').remove()"}" title="${tur ? 'Tur durur; MEBBİS panelindeki 🚌 düğmesinden kaldığınız yerden devam edebilirsiniz' : ''}" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">${tur ? 'Durdur' : 'Kapat'}</button></div></div>`;
     document.body.appendChild(m);
   }
   /* MEBBİS "Taşıma Araç Şoför Puantaj İşlemleri"nden: maliyet no, plaka, şoför, telefon, öğrenci alma / okuldan alma saati.
@@ -3791,9 +3801,15 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
   function mebbisServisUygula() {
     const S = mebbisServisSon; if (!S) return;
     const secili = [...document.querySelectorAll('#mebbis-servis-modal [data-mds]')].filter(c => c.checked).map(c => S.degis[+c.getAttribute('data-mds')]);
-    if (!secili.length) { alert('Hiçbir değişiklik seçilmedi.'); return; }
-    if (!confirm(`${secili.length} değişiklik uygulanacak.\n\nMevcut koltuk yerleri korunur; yeri değişen öğrenci yeni aracında boş koltuğa yerleşir. Devam edilsin mi?`)) return;
+    const adaya = [...document.querySelectorAll('#mebbis-servis-modal [data-mdy]')].filter(c => c.checked).map(c => (S.mebbisteYok || [])[+c.getAttribute('data-mdy')]).filter(Boolean);
+    if (!secili.length && !adaya.length) { if (S.tur) { mebbisServisTurGec(true); return; } alert('Hiçbir değişiklik seçilmedi.'); return; }
+    if (!confirm(`${secili.length + adaya.length} değişiklik uygulanacak.\n\nMevcut koltuk yerleri korunur; yeri değişen öğrenci yeni aracında boş koltuğa yerleşir. Hiçbir öğrenci silinmez. Devam edilsin mi?`)) return;
     const etkilenen = new Set(), sonuc = [];
+    adaya.forEach(m => {               // MEBBİS'te araçta olmayan öğrenci: silinmez, aday listesine alınır
+      const L = students[m.r.id] || []; const i = L.indexOf(m.s); if (i < 0) return;
+      L.splice(i, 1); candidateStudents.push(m.s); etkilenen.add(m.r);
+      sonuc.push(`${m.s.name} → aday listesi (${m.r.no} NOLU GÜZERGAH'tan alındı)`);
+    });
     secili.filter(d => d.tip === 'guzergah').forEach(d => {
       const sec = document.querySelector(`#mebbis-servis-modal [data-mdsg="${S.degis.indexOf(d)}"]`);
       const var_ = sec && sec.value ? routes.find(z => String(z.id) === String(sec.value)) : null;
@@ -3841,7 +3857,29 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     try { renderStudentSearch(); } catch (e) {}
     saveDataToStorage();
     const m = document.getElementById('mebbis-servis-modal'); if (m) m.remove();
+    if (S.tur && window.masaustu && window.masaustu.mebbisServisSiradaki) {      // güzergah güzergah tur: sonuçlar turun sonunda topluca gösterilir
+      mebbisTurSonuclari.push(...sonuc);
+      window.masaustu.mebbisServisSiradaki({ bitti: true });
+      return;
+    }
     alert('Tamamlandı.\n\n' + sonuc.map(x => '• ' + x).join('\n'));
+  }
+  /* Güzergah güzergah tur (MEBBİS panelinde 🚌 → güzergah seç → Başlat) */
+  let mebbisTurSonuclari = [];
+  function mebbisServisTurGec(bitti) {
+    const m = document.getElementById('mebbis-servis-modal'); if (m) m.remove();
+    if (window.masaustu && window.masaustu.mebbisServisSiradaki) window.masaustu.mebbisServisSiradaki({ bitti: !!bitti });
+  }
+  function mebbisServisTurDur() {
+    const m = document.getElementById('mebbis-servis-modal'); if (m) m.remove();
+    if (window.masaustu && window.masaustu.mebbisServisSiradaki) window.masaustu.mebbisServisSiradaki({ dur: true });
+    const L = mebbisTurSonuclari; mebbisTurSonuclari = [];
+    alert('Tur durduruldu. Biten güzergahlar ✔ ile işaretli kaldı; MEBBİS panelindeki 🚌 düğmesinden "Kaldığı yerden devam" diyebilirsiniz.' + (L.length ? '\n\nBu turda yapılanlar:\n' + L.map(x => '• ' + x).join('\n') : ''));
+  }
+  function mebbisTurBitti(o) {
+    const L = mebbisTurSonuclari; mebbisTurSonuclari = [];
+    const notlar = (o && o.notlar) || [];
+    alert(`✅ Seçilen ${(o && o.toplam) || ''} güzergahın hepsi bitti.` + (L.length ? '\n\nYapılanlar:\n' + L.map(x => '• ' + x).join('\n') : '\n\nProgramda değişiklik yapılmadı.') + (notlar.length ? '\n\nNotlar:\n' + notlar.map(x => '• ' + x).join('\n') : ''));
   }
   /* ============================================================
      MEBBİS ↔ PROGRAM: TEK GÜZERGAH KARŞILAŞTIRMA (✏️ penceresi açıkken)
@@ -3914,7 +3952,8 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
   }
   function mebbisTekSiradaki() {
     const m = document.getElementById('mebbis-tek-modal'); if (m) m.remove();
-    if (window.masaustu && window.masaustu.mebbisSiradaki) window.masaustu.mebbisSiradaki();
+    const S = mebbisTekSon; const bitti = !!(S && !S.satir.some(x => x.tur === 'ekle' || x.tur === 'cakisma'));   // yapılacak bir şey yoksa güzergah tamam
+    if (window.masaustu && window.masaustu.mebbisSiradaki) window.masaustu.mebbisSiradaki({ bitti });
   }
   function mebbisTekYon(y) {             // 'm': program doğru → MEBBİS'e yükle · 'p': MEBBİS doğru → programa al
     const S = mebbisTekSon; if (!S) return;
