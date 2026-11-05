@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "11.11.2026",
+      "surum": "12.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Servis Bilgileri'nde İhale No (MEBBİS Yaklaşık Maliyet No) ve İş artışı kutusu; ihale no yalnız bu sayfada görünür, iş artışı bütün çıktılarda güzergah adının yanında yazar. MEBBİS eşleştirmesi: ihale no → güzergah no + iş artışı → ad → şoför/plaka. Yeni ihale yılında güzergahlar numarasıyla bulunur."
+      "notlar": "Düzeltme: MEBBİS'ten güzergah alırken aynı araç ve şoför başka bir ihaledeki güzergahta da çalışıyorsa öğrenciler artık o güzergaha atılmaz, yeni güzergah açılır. İhale no'su yazılı güzergah yalnız kendi ihale no'su ya da aynı güzergah no ile eşleşir; tahmini eşleşmeler (plaka/şoför, ad) işaretsiz gelir. Servis Bilgileri'nde İhale No ve İş artışı."
     }
   },
   "kabuk": {
