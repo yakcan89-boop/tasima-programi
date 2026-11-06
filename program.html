@@ -303,7 +303,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 19.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 20.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -778,6 +778,18 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
           <tr><td style="background:#fff;">OKULA VARIŞ SAATİ</td><td><input type="text" id="seat-varis-saati" placeholder="Örn: 08:00" onchange="saveSeatInfo(); saveDataToStorage();" style="width:100px;"></td></tr>
           <tr><td style="background:#fff;">DÖNÜŞ SAATİ</td><td><input type="text" id="seat-donus-saati" placeholder="Örn: 12:50" onchange="saveSeatInfo(); saveDataToStorage();" style="width:100px;"></td></tr>
         </table>
+        <div class="no-print" style="background:#eef3f6; border:1px solid #1b4958; border-radius:6px; padding:9px 10px; margin:0 0 10px; display:flex; align-items:center; gap:9px; flex-wrap:wrap; max-width:1000px;">
+          <label style="font-weight:bold; font-size:12px; color:#1b4958;" title="Saatler tüm güzergahların koltuk planına ve çıktılarına, vakit puantaja gider">🕒 TÜM GÜZERGAHLAR:</label>
+          <span style="font-size:12px; white-space:nowrap;">Vakit <select id="vakit-toplu-sec" style="width:135px; font-weight:bold;" onchange="topluSaatKutulariDoldur()">
+            <option value="Sabah-Öğlen">Sabah-Öğlen</option>
+            <option value="Öğlen-Akşam">Öğlen-Akşam</option>
+          </select></span>
+          <span style="font-size:12px; white-space:nowrap;">Hareket <input type="text" id="toplu-hareket" maxlength="5" style="width:58px; text-align:center; font-weight:bold;"></span>
+          <span style="font-size:12px; white-space:nowrap;">Varış <input type="text" id="toplu-varis" maxlength="5" style="width:58px; text-align:center; font-weight:bold;"></span>
+          <span style="font-size:12px; white-space:nowrap;">Dönüş <input type="text" id="toplu-donus" maxlength="5" style="width:58px; text-align:center; font-weight:bold;"></span>
+          <button onclick="topluSaatUygula()" class="btn-nav btn-navy" style="padding:6px 14px; width:auto;">Tümüne Uygula</button>
+          <button onclick="toplamaYerleriniDuzelt()" class="btn-nav btn-orange" style="padding:6px 12px; width:auto;" title="Toplama yeri yazısındaki eski güzergah numarasını, güzergahın kendi numarasıyla değiştirir">📍 Toplama Yeri Numaralarını Düzelt</button>
+        </div>
         <div id="seat-kapasite-uyari" class="kapasite-uyari-kutu no-print" style="display:none;"></div>
         <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
           <table class="form-grid" id="seating-grid-table" style="max-width:640px; text-align:center;"></table>
@@ -806,18 +818,6 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         <button onclick="printServisListReport()" class="btn-nav btn-blue" style="padding:8px 16px; width:auto;">🖨️ Yazdır (A4)</button>
         <button onclick="exportServisListExcel()" class="btn-nav btn-green" style="padding:8px 16px; width:auto;">📊 Excel'e Aktar</button>
         <button onclick="exportServisListWord()" class="btn-nav btn-navy" style="padding:8px 16px; width:auto;">📄 Word'e Aktar</button>
-      </div>
-      <div style="background:#eef3f6; border:1px solid #1b4958; border-radius:6px; padding:10px; margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <label style="font-weight:bold; font-size:12px; color:#1b4958;">🕒 TÜM GÜZERGAHLARA TOPLU SAAT:</label>
-        <select id="vakit-toplu-sec" style="width:150px; font-weight:bold;" onchange="topluSaatKutulariDoldur()">
-          <option value="Sabah-Öğlen">Sabah-Öğlen</option>
-          <option value="Öğlen-Akşam">Öğlen-Akşam</option>
-        </select>
-        <span style="font-size:12px; white-space:nowrap;">Hareket <input type="text" id="toplu-hareket" maxlength="5" style="width:58px; text-align:center; font-weight:bold;"></span>
-        <span style="font-size:12px; white-space:nowrap;">Varış <input type="text" id="toplu-varis" maxlength="5" style="width:58px; text-align:center; font-weight:bold;"></span>
-        <span style="font-size:12px; white-space:nowrap;">Dönüş <input type="text" id="toplu-donus" maxlength="5" style="width:58px; text-align:center; font-weight:bold;"></span>
-        <button onclick="topluSaatUygula()" class="btn-nav btn-navy" style="padding:6px 14px; width:auto;">Tümüne Uygula</button>
-        <button onclick="toplamaYerleriniDuzelt()" class="btn-nav btn-orange" style="padding:6px 12px; width:auto;" title="Toplama yeri yazısındaki eski güzergah numarasını, güzergahın kendi numarasıyla değiştirir">📍 Toplama Yeri Numaralarını Düzelt</button>
       </div>
       <div class="no-print" style="background:#eff6ff; border:2px solid #93c5fd; border-radius:6px; padding:9px 11px; margin-bottom:10px; font-size:11.5px; color:#1e40af;">
         💡 <b>Güzergah no, güzergah adı, vakit ve rehber personel</b> bu sayfadan değiştirilir.
@@ -6904,10 +6904,21 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const bos = Object.entries(s).filter(([, v]) => !v).map(([k]) => ({ hareket: 'Hareket', varis: 'Varış', donus: 'Dönüş' }[k]));
     if (bos.length) { alert('Saat yanlış ya da boş: ' + bos.join(', ') + '\n\nSaati 12:40 biçiminde yazın.'); return; }
     if (!routes.length) { alert('Henüz güzergah yok.'); return; }
-    if (!confirm(`${routes.length} güzergahın saatleri değişecek:\n\nVakit: ${vakit}\nHareket: ${s.hareket}\nOkula varış: ${s.varis}\nDönüş: ${s.donus}\n\nGüzergahlara tek tek yazılmış saatlerin üzerine yazılır. Devam edilsin mi?`)) return;
+    const vakitDegisen = routes.filter(r => (r.vakit || 'Sabah-Öğlen') !== vakit).length;
+    if (!confirm(`${routes.length} güzergaha uygulanacak:\n\nHareket: ${s.hareket}\nOkula varış: ${s.varis}\nDönüş: ${s.donus}\n→ koltuk planlarına ve çıktılara yazılır (tek tek yazılmış saatlerin üzerine).\n\nVakit: ${vakit}${vakitDegisen ? ` (${vakitDegisen} güzergahın vakti değişecek)` : ' (değişmiyor)'}\n→ puantaja gider; bu aydan geçerli, geçmiş ve imzalı aylar değişmez.\n\nDevam edilsin mi?`)) return;
     try { const h = topluSaatHafiza(); h[vakit] = s; localStorage.setItem(TOPLU_SAAT_ANAHTARI(), JSON.stringify(h)); } catch (e) {}
-    applyVakitToAll(vakit);
+    routes.forEach(r => {
+      rotaVakitDegistir(r, vakit);
+      r.seatInfo = r.seatInfo || { toplamaYeri: r.name || '', hareketSaati: '', varisSaati: '', donusSaati: '' };
+      r.seatInfo.hareketSaati = s.hareket; r.seatInfo.varisSaati = s.varis; r.seatInfo.donusSaati = s.donus;
+    });
+    try { renderServisList(); } catch (e) {}
+    try { renderPuantajSheet(); } catch (e) {}
+    try { renderOzelEgitimSheet(); } catch (e) {}
+    try { renderSeatingPlan(); } catch (e) {}
+    saveDataToStorage();
     topluSaatKutulariDoldur();
+    alert(`✅ ${routes.length} güzergaha uygulandı.`);
   }
   window.addEventListener('load', () => setTimeout(() => { try {
     const sec = document.getElementById('vakit-toplu-sec');
@@ -7121,7 +7132,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
           </td>
           <td><input type="text" value="${rotaAdEksiz(r)}" onchange="rotaAdYaz(${i}, this.value)"></td>
           <td>
-            <select onchange="routes[${i}].vakit=this.value; applyVakitTimeDefaults(routes[${i}]); renderPuantajSheet(); renderOzelEgitimSheet(); renderSeatingPlan(); saveDataToStorage();" style="width:100%; font-weight:bold;">
+            <select onchange="rotaVakitDegistir(routes[${i}], this.value); renderPuantajSheet(); renderOzelEgitimSheet(); renderSeatingPlan(); saveDataToStorage();" style="width:100%; font-weight:bold;">
               <option value="Sabah-Öğlen" ${(r.vakit||'Sabah-Öğlen')==='Sabah-Öğlen'?'selected':''}>Sabah-Öğlen</option>
               <option value="Öğlen-Akşam" ${r.vakit==='Öğlen-Akşam'?'selected':''}>Öğlen-Akşam</option>
             </select>
@@ -10670,16 +10681,28 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
      şoför ya da plaka değişince eski bilgi "bitis" ayına kadar geçerli kalır, imzalanmış aylar değişmez. */
   function rotaDonemBilgi(route, donem) {
     const g = ((route && route.gecmis) || []).filter(x => x && x.bitis && (!donem || String(donem) <= x.bitis)).sort((a, b) => a.bitis < b.bitis ? -1 : 1)[0];
-    return g ? { driver: g.driver, plate: g.plate } : { driver: route.driver, plate: route.plate };
+    return g ? { driver: g.driver, plate: g.plate, vakit: g.vakit !== undefined ? g.vakit : route.vakit } : { driver: route.driver, plate: route.plate, vakit: route.vakit };
   }
   function rotaBilgiDegistir(route, alan, yeni) {           // alan: 'driver' | 'plate'; değişiklik içinde bulunulan aydan geçerli
     if (!route || String(route[alan] || '') === String(yeni || '')) return;
     const d = new Date(), o = new Date(d.getFullYear(), d.getMonth() - 1, 1);
     const bitis = `${o.getFullYear()}-${String(o.getMonth() + 1).padStart(2, '0')}`;
     route.gecmis = route.gecmis || [];
-    if (!route.gecmis.some(x => x.bitis === bitis) && (route.driver || route.plate)) route.gecmis.push({ bitis, driver: route.driver || '', plate: route.plate || '' });
+    if (!route.gecmis.some(x => x.bitis === bitis) && (route.driver || route.plate)) route.gecmis.push({ bitis, driver: route.driver || '', plate: route.plate || '', vakit: route.vakit || 'Sabah-Öğlen' });
     route[alan] = yeni;
   }
+  // Vakit değişikliği bu aydan geçerli: geçmiş (imzalı) ayların puantajı eski vakitle kalır
+  function rotaVakitDegistir(route, yeni) {
+    if (!route || (route.vakit || 'Sabah-Öğlen') === yeni) { if (route && !route.vakit) route.vakit = yeni; return; }
+    const d = new Date(), o = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    const bitis = `${o.getFullYear()}-${String(o.getMonth() + 1).padStart(2, '0')}`;
+    const eski = route.vakit || 'Sabah-Öğlen';
+    route.gecmis = route.gecmis || [];
+    route.gecmis.forEach(x => { if (x && x.vakit === undefined) x.vakit = eski; });
+    if (!route.gecmis.some(x => x.bitis === bitis)) route.gecmis.push({ bitis, driver: route.driver || '', plate: route.plate || '', vakit: eski });
+    route.vakit = yeni;
+  }
+  window.rotaVakitDegistir = rotaVakitDegistir;
   window.rotaDonemBilgi = rotaDonemBilgi; window.rotaBilgiDegistir = rotaBilgiDegistir;
   function getRouteDriverEntries(route, donem) {
     const db = rotaDonemBilgi(route, donem);
@@ -10797,7 +10820,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     let puantajGenelToplam = 0;
     const generalRoutes = routes.filter(r => !isOzelEgitimRoute(r));
     generalRoutes.forEach((r, idx) => {
-      const vakitParts = (r.vakit || 'Sabah-Öğlen').split('-');
+      const vakitParts = (rotaDonemBilgi(r, `${year}-${monthNum}`).vakit || 'Sabah-Öğlen').split('-');
       const label1 = (vakitParts[0] || 'Sabah').toLocaleUpperCase('tr-TR');
       const label2 = (vakitParts[1] || 'Öğlen').toLocaleUpperCase('tr-TR');
       const driverEntries = getRouteDriverEntries(r, `${year}-${monthNum}`);
@@ -10889,7 +10912,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     let bodyHtml = '';
     let sayfaToplam = 0;
     routesSubset.forEach((r, idx) => {
-      const vakitParts = (r.vakit || 'Sabah-Öğlen').split('-');
+      const vakitParts = (rotaDonemBilgi(r, `${year}-${monthNum}`).vakit || 'Sabah-Öğlen').split('-');
       const label1 = (vakitParts[0] || 'Sabah').toLocaleUpperCase('tr-TR');
       const label2 = (vakitParts[1] || 'Öğlen').toLocaleUpperCase('tr-TR');
       const driverEntries = getRouteDriverEntries(r, `${year}-${monthNum}`);
@@ -11014,7 +11037,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     let bodyHtml = '';
     let officialWorkedDays = 0;
     let ozelSoforGun = 0;
-    const vakitParts = (route.vakit || 'Sabah-Öğlen').split('-');
+    const vakitParts = (rotaDonemBilgi(route, `${year}-${monthNum}`).vakit || 'Sabah-Öğlen').split('-');
     const ozLabel1 = (vakitParts[0] || 'Sabah').toLocaleUpperCase('tr-TR');
     const ozLabel2 = (vakitParts[1] || 'Öğlen').toLocaleUpperCase('tr-TR');
     roles.forEach((role, rIdx) => {
@@ -11080,7 +11103,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     for (let day = 1; day <= daysInMonth; day++) header.push(String(day));
     header.push('TOPLAM');
     const rows = [header];
-    const vakitParts = (route.vakit || 'Sabah-Öğlen').split('-');
+    const vakitParts = (rotaDonemBilgi(route, `${year}-${monthNum}`).vakit || 'Sabah-Öğlen').split('-');
     const label1 = (vakitParts[0] || 'Sabah').toLocaleUpperCase('tr-TR');
     const label2 = (vakitParts[1] || 'Öğlen').toLocaleUpperCase('tr-TR');
     const roles = [
@@ -11157,7 +11180,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     ];
 
     let bodyHtml = '';
-    const ozPrintVakitParts = (route.vakit || 'Sabah-Öğlen').split('-');
+    const ozPrintVakitParts = (rotaDonemBilgi(route, `${year}-${monthNum}`).vakit || 'Sabah-Öğlen').split('-');
     const ozPrintLabel1 = (ozPrintVakitParts[0] || 'Sabah').toLocaleUpperCase('tr-TR');
     const ozPrintLabel2 = (ozPrintVakitParts[1] || 'Öğlen').toLocaleUpperCase('tr-TR');
     let ozPrintSoforGun = null;
@@ -11230,7 +11253,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     header.push('TOPLAM');
     const rows = [header];
     generalRoutes.forEach((r, idx) => {
-      const vakitParts = (r.vakit || 'Sabah-Öğlen').split('-');
+      const vakitParts = (rotaDonemBilgi(r, `${year}-${monthNum}`).vakit || 'Sabah-Öğlen').split('-');
       const label1 = (vakitParts[0] || 'Sabah').toLocaleUpperCase('tr-TR');
       const label2 = (vakitParts[1] || 'Öğlen').toLocaleUpperCase('tr-TR');
       const driverEntries = getRouteDriverEntries(r, `${year}-${monthNum}`);
