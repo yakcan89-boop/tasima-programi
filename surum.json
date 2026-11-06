@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "19.11.2026",
+      "surum": "20.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Servis Bilgileri: toplu saat — hareket, varış ve dönüş saatini yazıp tüm güzergahlara uygula (son saatler hatırlanır). Anasayfa: Görevli Öğretmen Sayısı o ay nöbet tutan öğretmenleri, Okul İdareci Sayısı müdür ve müdür yardımcısı kutularını sayar."
+      "notlar": "Toplu saat ve vakit, Güzergah Şoför & Öğrenci sayfasına (saat kutularının altına) taşındı. Vakit değişikliği bu aydan geçerli; geçmiş ve imzalı ayların puantajı değişmez."
     }
   },
   "kabuk": {
