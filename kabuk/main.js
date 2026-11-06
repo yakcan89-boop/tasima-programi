@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.15';
+const KABUK_SURUM = '1.1.16';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -503,8 +503,22 @@ function mebbisIndirmeYakala() {
   });
 }
 global.__dbg = [];
+/* KURUM KODU: MEBBİS sayfasının üstündeki "Sn. OKUL ADI ( 731480 )" satırından okunur ve programa bildirilir.
+   Program okulun kurum kodunu kaydeder; programda açık okul ile MEBBİS'teki okul farklıysa sorar.
+   false dönerse (kullanıcı vazgeçti) aktarım yapılmaz. */
+const KURUM_JS = `(() => { const m = (document.body && document.body.innerText || '').match(/Sn\\.\\s*([^\\n(]+?)\\s*\\(\\s*(\\d{5,8})\\s*\\)/); return m ? { kod: m[2], ad: m[1].trim() } : null; })()`;
+async function kurumBildir(calistir) {
+  try {
+    const k = await calistir(KURUM_JS);
+    if (!k || !k.kod || !anaPencere) return true;
+    const r = await anaPencere.webContents.executeJavaScript(`typeof kurumKoduMebbis === 'function' ? kurumKoduMebbis(${JSON.stringify(k)}) : true`);
+    if (r === false) return false;
+  } catch (x) {}
+  return true;
+}
 async function mebbisOgrenciAktar(e) {
   const wc = (e.senderFrame && e.senderFrame.parent) ? e.senderFrame : e.sender;
+  if (!(await kurumBildir(c => wc.executeJavaScript(c)))) return;
   aktarimBekleyen = { t: Date.now(), sayi: '' };
   try {
     const sonuc = await wc.executeJavaScript(`(() => {
@@ -690,6 +704,7 @@ async function mebbisServisOku(e, secim) {
     }
     liste = aktifSatirlar(liste);
     if (secim) liste = liste.filter(g => secim.has(guzAnahtar(g)));
+    if (!(await kurumBildir(js))) return;
     const sonuc = [], uyarilar = [];
     // önce her güzergahın ⓘ bölge bilgisini al (pencere açmadan)
     const bolge = {};
@@ -800,6 +815,7 @@ async function servisTurGoster(ctx, mod) {
   if (servisCalisiyor) return; servisCalisiyor = true;
   try {
     if (mod === 'siradaki') ctx.pos++;
+    if (!ctx.kurumTamam) { if (!(await kurumBildir(js))) { servisTurCtx = null; return; } ctx.kurumTamam = true; }
     const L = await js('__tsr.liste()');
     if (!L || !L.length) { dialog.showMessageBox({ type: 'info', message: 'Güzergah listesi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasında Sorgula deyin, güzergahlar görününce tekrar deneyin." }); return; }
     let g = null; const atlanan = [];
@@ -859,6 +875,7 @@ ipcMain.on('mebbis-bu-guzergah-al', async e => {
     const L = await js('__tsr.liste()');
     const g = await acikGuzergahBul(js, L, m);
     if (!g) { dialog.showMessageBox(BELIRSIZ(m.plaka)); return; }
+    if (!(await kurumBildir(js))) return;
     if (g.maliyet) { try { g.bolge = await js(`__tsr.bolgeler(${JSON.stringify(g.maliyet)})`); } catch (x) {} }
     let okul = ''; try { okul = await js('__tsr.okul()'); } catch (x) {}
     const uyarilar = [];
@@ -878,6 +895,7 @@ async function yerlestirGoster(ctx, mod) {
     let L = await js('__tsr.liste()');
     if (!L || !L.length) { dialog.showMessageBox({ type: 'info', message: 'Güzergah listesi bulunamadı.', detail: "MEBBİS'te Taşıma Servis İşlemleri sayfasında Sorgula deyin, güzergahlar görününce tekrar deneyin." }); return; }
     L = aktifSatirlar(L);
+    if (!ctx.kurumTamam) { if (!(await kurumBildir(js))) { yerlestirCtx = null; return; } ctx.kurumTamam = true; }
     let m = (await js('__tsr.modalKok()')) ? await js('__tsr.modalOku()') : null;
     let gSec = null, ac = null;
     const sonGeldi = async detay => {
@@ -973,7 +991,7 @@ async function mebbisSoforOku(odak) {
   let liste = null;
   for (const w of mebbisPencereleri(odak)) {
     let cerceveler = []; try { cerceveler = w.webContents.mainFrame.framesInSubtree; } catch (x) { cerceveler = [w.webContents.mainFrame]; }
-    for (const f of cerceveler) { try { const l = await f.executeJavaScript(SOFOR_OKU_JS); if (l && l.length) { liste = l; break; } } catch (x) {} }
+    for (const f of cerceveler) { try { const l = await f.executeJavaScript(SOFOR_OKU_JS); if (l && l.length) { liste = l; if (!(await kurumBildir(c => f.executeJavaScript(c)))) return; break; } } catch (x) {} }
     if (liste) break;
   }
   if (!liste) { dialog.showMessageBox({ type: 'info', message: 'Şoför puantaj sayfası bulunamadı.', detail: "MEBBİS'te Taşımalı Öğrenci Modülü → İlkokul-Orta Okul Taşıma İşlemleri → Taşıma Araç Şoför Puantaj İşlemleri sayfasını açın, araçlar görününce tekrar deneyin." }); return; }
@@ -1073,6 +1091,7 @@ ipcMain.on('mebbis-tek-karsilastir', async e => {
     const L = await wc.executeJavaScript('__tsr.liste()');
     const g = await acikGuzergahBul(c => wc.executeJavaScript(c), L, m);
     if (!g) { dialog.showMessageBox(BELIRSIZ(m.plaka)); return; }
+    if (!(await kurumBildir(c => wc.executeJavaScript(c)))) return;
     const veri = { guzNo: g.guzNo, plaka: m.plaka, sofor: m.sofor, ogrenciler: m.ogrenciler, kapasite: g.kapasite, maliyet: g.maliyet, isArtisi: isArtisiMi(g), baslik: g.baslik };
     anaPencere.show(); anaPencere.focus();
     const var_ = await anaPencere.webContents.executeJavaScript(`typeof mebbisTekKarsilastir === 'function'`);
