@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 13.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 14.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -1322,6 +1322,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
               <option value="nakil">Nakil / Ayrılanlar</option>
               <option value="hepsi">Tümü (Aktif + Mezun)</option>
               <option value="arsiv">Arşiv (eski mezun / nakil)</option>
+              <option value="koltuk">⚠️ Koltuk sorunu olanlar (koltuksuz / kapasite aşımı)</option>
             </select>
           </div>
           <div>
@@ -1334,10 +1335,12 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       </div>
 
       <div id="std-search-summary" style="font-weight:bold; font-size:13px; color:#1b4958; margin-bottom:8px;"></div>
+      <div id="ara-toplu-cubuk" class="no-print" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:8px; padding:6px 8px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;"></div>
 
       <table class="form-grid">
         <thead>
           <tr>
+            <th style="width:28px;" class="no-print"><input type="checkbox" id="ara-hepsini-sec" title="Listedekilerin hepsini seç" onchange="araHepsiniSec(this.checked)" style="width:auto;"></th>
             <th style="width:40px;">S.N.</th>
             <th style="width:110px;">T.C. KİMLİK NO</th>
             <th>ÖĞRENCİ ADI SOYADI</th>
@@ -2771,6 +2774,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     let totalStudCount = 0;
     for (let k in students) totalStudCount += (students[k] || []).length;
     document.getElementById('dash-total-students').innerText = totalStudCount;
+    try { anasayfaKoltukUyari(); } catch (e) {}
     document.getElementById('dash-total-drivers').innerText = routes.length;
     const gradEl = document.getElementById('grad-count');
     if (gradEl) gradEl.innerText = gorunurAyrilanlar().length;
@@ -5365,6 +5369,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     return (students[route.id] || []).some(s => s && s !== ogr && s.cinsiyet === 'E');
   }
   function koltukSeviye(s) { const m = String((s && s.grade) || '').match(/\d+/); return m ? m[0] : ''; }
+  var sonKoltukDegisimi = null;
   function placeStudentInFirstFreeSeat(route, ogr, sor) {
     ensureSeatingData(route);
     if (!route.seatNames) route.seatNames = {};
@@ -5397,7 +5402,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     if (en !== null) return yaz(en);
     // Kız öğrenci için arkada yer yok ama önde boş koltuk var → erkek öğrenciyle yer değiştirme önerisi
     const onBos = []; for (let n = 1; n <= Math.min(ON_KOLTUK_SAYISI, route.seatCount); n++) if (bos(n)) onBos.push(n);
-    if (onYasak && onBos.length && sor !== false && !koltukSessiz) {
+    if (onYasak && onBos.length && (sor === 'oto' || (sor !== false && !koltukSessiz))) {
       const erkekler = [];
       for (let n = ON_KOLTUK_SAYISI + 1; n <= sinir; n++) {
         const o = koltuktakiOgrenci(route, n);
@@ -5408,9 +5413,10 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       }
       erkekler.sort((x, y) => (y.yanKiz - x.yanKiz) || (y.n - x.n));   // önce yanında kız oturan, sonra en arkadaki
       const sec = erkekler[0];
-      if (sec && confirm(`🚌 ${guzergahTamAdi(route)}\n\n"${ogr.name}" kız öğrenci; ön koltuğa yazılamaz, arkada da boş koltuk yok.\nÖnde ${onBos[0]} numaralı koltuk boş.\n\n${sec.n} numarada oturan "${sec.o.name}" öne (${onBos[0]} numara) alınsın,\n"${ogr.name}" onun yerine (${sec.n} numara) otursun mu?\n\nDiğer öğrencilerin yeri değişmez.\n(İptal derseniz öğrenci arkaya açılan fazla koltuğa yazılır.)`)) {
+      if (sec && (sor === 'oto' || confirm(`🚌 ${guzergahTamAdi(route)}\n\n"${ogr.name}" kız öğrenci; ön koltuğa yazılamaz, arkada da boş koltuk yok.\nÖnde ${onBos[0]} numaralı koltuk boş.\n\n${sec.n} numarada oturan "${sec.o.name}" öne (${onBos[0]} numara) alınsın,\n"${ogr.name}" onun yerine (${sec.n} numara) otursun mu?\n\nDiğer öğrencilerin yeri değişmez.\n(İptal derseniz öğrenci arkaya açılan fazla koltuğa yazılır.)`))) {
         route.seatNames[onBos[0]] = route.seatNames[sec.n];
         if (route.seatNos[sec.n]) route.seatNos[onBos[0]] = route.seatNos[sec.n]; else delete route.seatNos[onBos[0]];
+        sonKoltukDegisimi = { erkek: route.seatNames[onBos[0]], eski: sec.n, yeni: onBos[0] };   // toplu yerleştirme raporu için
         return yaz(sec.n);
       }
     }
@@ -5630,6 +5636,166 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           <button onclick="silineniGeriAl(${x.i})" style="background:#15803d; color:#fff; border:none; border-radius:4px; padding:3px 10px; cursor:pointer; font-weight:bold; font-size:11px;">↩️ Geri Al</button></div>`).join('')}
       </div>`;
     });
+  }
+
+  /* ==========================================================
+     ÖĞRENCİ ARA — KOLTUK SORUNU, TOPLU SEÇİM VE TOPLU İŞLEMLER
+     • Aktif öğrenci silinmez; yalnız aday listesine alınır (koltuğu boşalır).
+     • Aday / mezun / nakil / arşiv kayıtları silinebilir: önce yedek alınır, "Silinen Kayıtlar"dan geri alınır.
+     • "Koltuğu olmayanları yerleştir": kendi aracında boş koltuk; kız öğrenciye yalnız önde yer varsa arkadan
+       bir erkek öğrenci öne alınır; araçta hiç yer yoksa kapasite üstü koltuğa yazılır (kırmızı).
+     ========================================================== */
+  function koltukSorunu(seat, kap, sayi) {
+    const n = parseInt(seat, 10);
+    if (!seat) return { kisa: 'koltuk yok', metin: 'Koltuğa yerleştirilmemiş — "Koltuğu olmayanları yerleştir" ile yerleştirin', renk: '#b91c1c' };
+    if (kap && n > kap) return { kisa: 'kapasite aşımı', metin: `Kapasite üstü koltuk: ${n}. koltuk, araç kapasitesi ${kap} (araçta ${sayi} öğrenci). Başka servise taşıyın ya da aday listesine alın.`, renk: '#b91c1c' };
+    if (!kap) return { kisa: 'kapasite yazılmamış', metin: "Aracın kapasitesi yazılmamış — Servis Bilgileri'nde kapasiteyi girin", renk: '#b45309' };
+    return null;
+  }
+  function koltukSorunSayilari() {
+    let koltuksuz = 0; const asimli = new Set();
+    (routes || []).forEach(r => {
+      const d = buildSeatIndex(r), kap = aracKapasitesi(r);
+      (students[r.id] || []).forEach(s => {
+        if (!s || !s.name || !String(s.name).trim()) return;
+        const seat = (s.okulNo && d.byNo[String(s.okulNo)]) || d.byName[normalizeSearchText(s.name)] || '';
+        if (!seat) koltuksuz++; else if (kap && parseInt(seat, 10) > kap) asimli.add(r.id);
+      });
+    });
+    return { koltuksuz, asim: asimli.size };
+  }
+  var araSecili = new Set(), araSonSatirlar = [];
+  function araRefObje(ref) {
+    if (!ref) return null;
+    if (ref.tip === 'aktif') return (students[ref.rId] || [])[ref.idx] || null;
+    if (ref.tip === 'aday') return candidateStudents[ref.idx] || null;
+    return graduatedStudents[ref.idx] || null;
+  }
+  function araSec(i, acik) { const r = araSonSatirlar[i]; const o = r && araRefObje(r.ref); if (!o) return; if (acik) araSecili.add(o); else araSecili.delete(o); araTopluCubukCiz(); }
+  function araHepsiniSec(acik) {
+    araSonSatirlar.forEach(r => { const o = araRefObje(r.ref); if (!o) return; if (acik) araSecili.add(o); else araSecili.delete(o); });
+    document.querySelectorAll('#std-search-body [data-ara]').forEach(c => { c.checked = !!acik; });
+    araTopluCubukCiz();
+  }
+  function araSeciliSatirlar() { return araSonSatirlar.filter(r => { const o = araRefObje(r.ref); return o && araSecili.has(o); }); }
+  function araTopluCubukCiz() {
+    const k = document.getElementById('ara-toplu-cubuk'); if (!k) return;
+    const sec = araSeciliSatirlar();
+    const aktif = sec.filter(r => r.ref.tip === 'aktif').length, aday = sec.filter(r => r.ref.tip === 'aday').length, ayrilan = sec.filter(r => r.ref.tip !== 'aktif' && r.ref.tip !== 'aday').length;
+    const hs = document.getElementById('ara-hepsini-sec'); if (hs) hs.checked = araSonSatirlar.length > 0 && sec.length === araSonSatirlar.length;
+    const ks = koltukSorunSayilari();
+    const btn = (renk, metin, onclick, kapali, title) => `<button type="button" onclick="${onclick}" ${kapali ? 'disabled' : ''} title="${title || ''}" style="background:${kapali ? '#cbd5e1' : renk}; color:#fff; border:none; border-radius:5px; padding:5px 10px; font-weight:bold; font-size:11.5px; cursor:${kapali ? 'default' : 'pointer'};">${metin}</button>`;
+    const rotaSec = `<select id="ara-tasi-hedef" style="width:auto; font-size:11.5px; padding:3px;" ${aday ? '' : 'disabled'}><option value="">Adayları taşı…</option>${(routes || []).map(r => `<option value="${r.id}">→ ${guzergahEtiketi(r)}</option>`).join('')}<option value="MEZUN">→ Mezun</option><option value="NAKİL">→ Nakil</option></select>`;
+    k.innerHTML = `<b style="color:#1b4958;">Seçili: ${sec.length}</b>
+      ${btn('#a16207', '⏸️ Aday listesine al' + (aktif ? ` (${aktif})` : ''), 'araTopluAdaya()', !aktif, 'Seçili aktif öğrenciler güzergahtan çıkar, aday listesine geçer (aktif öğrenci silinmez)')}
+      ${rotaSec}${btn('#0e7490', 'Taşı', 'araTopluTasi()', !aday)}
+      ${btn('#b91c1c', '🗑 Seçilileri sil' + (aday + ayrilan ? ` (${aday + ayrilan})` : ''), 'araTopluSil()', !(aday + ayrilan), 'Yalnız aday / mezun / nakil / arşiv kayıtları silinir; önce yedek alınır, Silinen Kayıtlar kutusundan geri alınabilir')}
+      <span style="flex:1"></span>
+      ${btn('#4b3f8c', `🪑 Koltuğu olmayanları yerleştir${ks.koltuksuz ? ` (${ks.koltuksuz})` : ''}`, 'koltuksuzlariYerlestir()', !ks.koltuksuz, 'Bütün güzergahlarda koltuğu olmayan aktif öğrencileri kendi araçlarında boş koltuğa yerleştirir')}`;
+  }
+  function aktifiAdayaAl(rota, ogr) {
+    const L = students[rota.id] || []; const i = L.indexOf(ogr); if (i < 0) return false;
+    removeStudentFromSeating(rota, ogr); L.splice(i, 1);
+    candidateStudents.push({ name: ogr.name, okulNo: ogr.okulNo || '', grade: ogr.grade || '', sube: ogr.sube || '', cinsiyet: ogr.cinsiyet || '', tc: ogr.tc || '', ...(ogr.ozelEgitim ? { ozelEgitim: ogr.ozelEgitim } : {}) });
+    return true;
+  }
+  function araSonrasiYenile() {
+    araSecili = new Set();
+    refreshAllRouteViews(); try { renderAdayList(); } catch (e) {}
+    populateStudentSearchFilters(); renderStudentSearch(); saveDataToStorage();
+  }
+  function araTopluAdaya() {
+    const sec = araSeciliSatirlar().filter(r => r.ref.tip === 'aktif'); if (!sec.length) return;
+    if (!confirm(`${sec.length} aktif öğrenci güzergahından çıkarılıp ADAY listesine alınacak; koltukları boşalacak.\n\nDevam edilsin mi?`)) return;
+    const nesneler = sec.map(r => ({ rota: routes.find(x => String(x.id) === String(r.ref.rId)), o: araRefObje(r.ref) }));   // sıra kaymasın diye önce nesneler alınır
+    let n = 0; nesneler.forEach(x => { if (x.rota && x.o && aktifiAdayaAl(x.rota, x.o)) n++; });
+    araSonrasiYenile(); alert(`${n} öğrenci aday listesine alındı.`);
+  }
+  function araTopluSil() {
+    const sec = araSeciliSatirlar().filter(r => r.ref.tip !== 'aktif'); if (!sec.length) return;
+    if (!confirm(`${sec.length} kayıt silinecek (aday / mezun / nakil / arşiv).\n\nSilmeden önce yedek alınır; yanlışlıkla silerseniz bu sayfanın üstündeki "Silinen Kayıtlar" kutusundan geri alabilirsiniz.\n\nDevam edilsin mi?`)) return;
+    if (window.masaustu && window.masaustu.oncedenYedek) { try { window.masaustu.oncedenYedek('Toplu silme öncesi'); } catch (e) {} }
+    const nesneler = sec.map(r => ({ tip: r.ref.tip, o: araRefObje(r.ref) })).filter(x => x.o);
+    nesneler.forEach(x => {
+      const liste = x.tip === 'aday' ? candidateStudents : graduatedStudents;
+      const i = liste.indexOf(x.o); if (i < 0) return;
+      silinenKaydet('ogrenci', `${x.o.name} — ${x.tip === 'aday' ? 'aday listesi' : 'mezun / nakil listesi'}`, { tip: x.tip, rId: null, ogr: JSON.parse(JSON.stringify(x.o)), koltuk: '' });
+      liste.splice(i, 1);
+    });
+    araSonrasiYenile(); alert(`${nesneler.length} kayıt silindi. "Silinen Kayıtlar" kutusundan geri alınabilir.`);
+  }
+  function araTopluTasi() {
+    const hedef = (document.getElementById('ara-tasi-hedef') || {}).value || '';
+    const sec = araSeciliSatirlar().filter(r => r.ref.tip === 'aday'); if (!sec.length) return;
+    if (!hedef) { alert('Önce taşınacak yeri seçin (güzergah, mezun ya da nakil).'); return; }
+    const nesneler = sec.map(r => araRefObje(r.ref)).filter(Boolean);
+    if (hedef === 'MEZUN' || hedef === 'NAKİL') {
+      if (!confirm(`${nesneler.length} aday öğrenci ${hedef === 'MEZUN' ? 'mezun' : 'nakil'} olarak kaydedilecek. Devam edilsin mi?`)) return;
+      nesneler.forEach(o => { const i = candidateStudents.indexOf(o); if (i < 0) return; candidateStudents.splice(i, 1);
+        graduatedStudents.push(Object.assign({}, o, { routeId: null, guzergahAd: '', tur: hedef, ayrilis: new Date().toISOString() })); });
+      araSonrasiYenile(); alert(`${nesneler.length} öğrenci ${hedef === 'MEZUN' ? 'mezun' : 'nakil'} listesine alındı.`); return;
+    }
+    const rota = routes.find(r => String(r.id) === String(hedef)); if (!rota) return;
+    if (!kapasiteUyarisiVer(rota, nesneler.length)) return;
+    if (!confirm(`${nesneler.length} aday öğrenci ${guzergahTamAdi(rota)} güzergahına eklenecek ve boş koltuklara yerleştirilecek. Devam edilsin mi?`)) return;
+    const satir = [];
+    nesneler.forEach(o => { const i = candidateStudents.indexOf(o); if (i < 0) return; candidateStudents.splice(i, 1);
+      (students[rota.id] = students[rota.id] || []).push(o); sonKoltukDegisimi = null;
+      const k = placeStudentInFirstFreeSeat(rota, o, 'oto'); const kap = aracKapasitesi(rota);
+      satir.push(`• ${o.name} → ${k ? k + '. koltuk' + (kap && k > kap ? ' (KAPASİTE ÜSTÜ)' : '') : 'koltuk atanamadı'}${sonKoltukDegisimi ? ` — ${sonKoltukDegisimi.erkek} ${sonKoltukDegisimi.eski} → ${sonKoltukDegisimi.yeni} numaraya alındı` : ''}`); });
+    araSonrasiYenile(); alert(`${guzergahTamAdi(rota)}\n\n${satir.join('\n')}`);
+  }
+  function koltuksuzlariYerlestir() {
+    const is = [];
+    (routes || []).forEach(r => {
+      const d = buildSeatIndex(r);
+      (students[r.id] || []).forEach(s => {
+        if (!s || !s.name || !String(s.name).trim()) return;
+        const seat = (s.okulNo && d.byNo[String(s.okulNo)]) || d.byName[normalizeSearchText(s.name)] || '';
+        if (!seat) is.push({ r, s });
+      });
+    });
+    if (!is.length) { alert('Koltuğu olmayan aktif öğrenci yok.'); return; }
+    if (!confirm(`${is.length} aktif öğrencinin koltuğu yok. Kendi araçlarında boş koltuğa yerleştirilecek.\n\n• Koltuğu olan öğrencilerin yeri değişmez.\n• Kız öğrenciye yalnız önde yer varsa arkadan bir erkek öğrenci öne alınır.\n• Araçta yer yoksa kapasite üstü koltuğa yazılır (kırmızı görünür).\n\nDevam edilsin mi?`)) return;
+    const normal = [], degisim = [], asim = [], olmadi = [];
+    is.forEach(({ r, s }) => {
+      sonKoltukDegisimi = null;
+      const k = placeStudentInFirstFreeSeat(r, s, 'oto'); const kap = aracKapasitesi(r), ad = `${s.name} — ${r.no} NOLU`;
+      if (!k) { olmadi.push(`• ${ad}: koltuk açılamadı (araçta 60 koltuk dolu)`); return; }
+      if (sonKoltukDegisimi) degisim.push(`• ${ad}: ${k}. koltuk — ön koltuk kız öğrenciye uygun değildi; ${sonKoltukDegisimi.erkek} ${sonKoltukDegisimi.eski} → ${sonKoltukDegisimi.yeni} numaraya alındı`);
+      else if (kap && k > kap) asim.push(`• ${ad}: ${k}. koltuk — KAPASİTE AŞIMI (${(students[r.id] || []).length} öğrenci / ${kap} kapasite)`);
+      else if (!kap) normal.push(`• ${ad}: ${k}. koltuk (aracın kapasitesi yazılmamış)`);
+      else normal.push(`• ${ad}: ${k}. koltuk`);
+    });
+    try { renderSeatingPlan(); } catch (e) {}
+    araSonrasiYenile();
+    const bolum = (b, L) => L.length ? `${b} (${L.length})\n${L.join('\n')}\n\n` : '';
+    araRaporGoster('🪑 Koltuğa yerleştirme sonucu',
+      bolum('✅ Boş koltuğa yerleştirilenler', normal) + bolum('🔄 Yer değiştirilerek yerleştirilenler', degisim) +
+      bolum('🔴 Kapasite üstü koltuğa yazılanlar — başka servise taşıyın ya da aday listesine alın', asim) + bolum('⚠️ Yerleştirilemeyenler', olmadi));
+  }
+  function araRaporGoster(baslik, metin) {
+    let k = document.getElementById('ara-rapor-modal'); if (k) k.remove();
+    k = document.createElement('div'); k.id = 'ara-rapor-modal';
+    k.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:16px';
+    const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    k.innerHTML = `<div style="background:#fff;border-radius:12px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,.35)">
+      <div style="padding:12px 18px;background:#4b3f8c;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">${esc(baslik)}</div>
+      <pre style="margin:0;padding:14px 18px;overflow:auto;white-space:pre-wrap;font:13px/1.5 'Segoe UI',sans-serif">${esc(metin.trim() || 'Değişiklik yok.')}</pre>
+      <div style="padding:10px 18px;border-top:1px solid #e2e8f0;text-align:right"><button type="button" onclick="document.getElementById('ara-rapor-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:8px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
+    document.body.appendChild(k);
+  }
+  window.araSec = araSec; window.araHepsiniSec = araHepsiniSec; window.araTopluAdaya = araTopluAdaya; window.araTopluSil = araTopluSil; window.araTopluTasi = araTopluTasi; window.koltuksuzlariYerlestir = koltuksuzlariYerlestir;
+  function anasayfaKoltukUyari() {
+    const grid = document.querySelector('#page-anasayfa .dash-grid') || document.querySelector('.dash-grid'); if (!grid) return;
+    let u = document.getElementById('dash-koltuk-uyari');
+    const k = koltukSorunSayilari();
+    if (!k.koltuksuz && !k.asim) { if (u) u.remove(); return; }
+    if (!u) { u = document.createElement('div'); u.id = 'dash-koltuk-uyari'; grid.parentNode.insertBefore(u, grid.nextSibling); }
+    u.style.cssText = 'margin:0 0 12px; padding:9px 12px; background:#fef2f2; border:2px solid #fca5a5; border-radius:6px; color:#991b1b; font-weight:bold; font-size:13px; cursor:pointer;';
+    u.title = "Öğrenci Ara'da koltuk sorunu olanları göster";
+    u.innerHTML = `⚠️ ${[k.koltuksuz ? `${k.koltuksuz} öğrencinin koltuğu yok` : '', k.asim ? `${k.asim} serviste kapasite aşımı var` : ''].filter(Boolean).join(' · ')} — göstermek için tıklayın`;
+    u.onclick = () => { showPage('ogrenci-ara'); const st = document.getElementById('std-search-status'); if (st) st.value = 'koltuk'; renderStudentSearch(); };
   }
 
   function deleteStudentFromSearch(tip, rId, idx) {
@@ -11824,10 +11990,11 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       });
     };
 
-    if (status !== 'mezun' && status !== 'nakil' && status !== 'aday') {
+    if (status === 'aktif' || status === 'hepsi' || status === 'koltuk') {
       routes.forEach(r => {
         if (routeFilter && String(r.id) !== String(routeFilter)) return;
         const koltukDizin = buildSeatIndex(r);
+        const kapR = aracKapasitesi(r), sayiR = (students[r.id] || []).filter(x => x && x.name && String(x.name).trim()).length;
         const soforAdi = formatNameCase(r.driver || '');
         (students[r.id] || []).forEach((s, sIdx) => {
           if (!s.name || !s.name.trim()) return;
@@ -11848,6 +12015,9 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
             durum: 'AKTİF',
             ref: { tip: 'aktif', rId: r.id, idx: sIdx }
           });
+          const son = rows[rows.length - 1];
+          son.koltukSorun = koltukSorunu(son.seat, kapR, sayiR);
+          if (status === 'koltuk' && !son.koltukSorun) rows.pop();
         });
       });
     }
@@ -12382,19 +12552,23 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     tbody.innerHTML = '';
 
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; color:#888; padding:18px;">Aradığınız kriterlere uyan öğrenci bulunamadı.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="14" style="text-align:center; color:#888; padding:18px;">Aradığınız kriterlere uyan öğrenci bulunamadı.</td></tr>';
     } else {
       const parcalar = [];   // tek seferde yazmak için biriktirilir
       const oeTc = new Set(); try { topluHepsi().forEach(h => { if (h.s.ozelEgitim && h.s.tc) oeTc.add(String(h.s.tc)); }); } catch (e) {}
       rows.forEach((r, idx) => {
         const durumRenk = r.durum === 'AKTİF' ? '#15803d' : (r.durum === 'ADAY' ? '#a16207' : (r.durum === 'NAKİL' ? '#b45309' : '#800020'));
-        const koltuk = r.seat ? `<b style="color:#4b3f8c;">${r.seat}</b>` : '<span style="color:#bbb;">—</span>';
+        const ks = r.koltukSorun;
+        const koltuk = ks ? `<span title="${ks.metin}" style="display:inline-block; background:${ks.renk}; color:#fff; border-radius:4px; padding:1px 6px; font-weight:bold; font-size:11px;">${r.seat || '—'}</span><div style="font-size:9.5px; color:${ks.renk}; font-weight:bold; line-height:1.15; margin-top:1px;">${ks.kisa}</div>`
+          : (r.seat ? `<b style="color:#4b3f8c;">${r.seat}</b>` : '<span style="color:#bbb;">—</span>');
+        const secObj = araRefObje(r.ref);
         const cins = r.cinsiyet === 'E' ? '<span style="color:#1d4ed8; font-weight:bold;">Erkek</span>'
                    : (r.cinsiyet === 'K' ? '<span style="color:#be185d; font-weight:bold;">Kız</span>' : '<span style="color:#ccc;">—</span>');
         const seviye = (String(r.grade || '').match(/\d{1,2}/) || [''])[0];
         const bos = '<span style="color:#ccc;">—</span>';
         parcalar.push(`
           <tr${r.durum === 'ADAY' ? ' style="background:#fffbeb;"' : (r.durum === 'NAKİL' ? ' style="background:#fff7ed;"' : '')}>
+            <td style="text-align:center;" class="no-print"><input type="checkbox" data-ara="${idx}" ${secObj && araSecili.has(secObj) ? 'checked' : ''} onchange="araSec(${idx}, this.checked)" style="width:auto;"></td>
             <td style="text-align:center; background:#1b4958; color:#fff;">${idx + 1}</td>
             <td style="text-align:center; font-size:11px; font-family:monospace;${tcHataliMi(r.tc) ? ' background:#fee2e2; color:#b91c1c; font-weight:bold;' : ''}" ${tcHataliMi(r.tc) ? `title="${tcHataMetni(r.tc)}"` : ''}>${r.tc || bos}${tcHataliMi(r.tc) ? ' ⚠' : ''}</td>
             <td><b>${r.name}</b>${r.tc && oeTc.has(String(r.tc)) ? ' <span title="MEBBİS\'te özel eğitim öğrencisi" style="font-size:10px; background:#ede9fe; color:#6d28d9; border-radius:4px; padding:1px 5px; font-weight:bold;">Özel eğitim</span>' : ''}</td>
@@ -12416,6 +12590,11 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       });
       tbody.innerHTML = parcalar.join('');
     }
+    araSonSatirlar = rows;
+    // görünmeyen satırların seçimi düşer
+    const gorunen = new Set(rows.map(r => araRefObje(r.ref)).filter(Boolean));
+    [...araSecili].forEach(o => { if (!gorunen.has(o)) araSecili.delete(o); });
+    araTopluCubukCiz();
 
     if (summary) {
       const aktif = rows.filter(r => r.durum === 'AKTİF').length;
