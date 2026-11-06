@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "16.11.2026",
+      "surum": "17.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Anasayfa'da BULUT EŞİTLEME (TELEGRAM) şeridi: okulun verisi kendi Telegram kanalınıza şifreli gönderilir, diğer bilgisayarlarınız açılışta en yenisini alır. Başka bilgisayarda kurum kodu + şifre + bağlantı anahtarı ile okul verisi çekilir: o okul varsa güncellenir, yoksa yeni okul eklenir."
+      "notlar": "Bulut düğmesi yedekleme şeridine taşındı; ayarlar sayfayı itmeden pencerede açılır. '📖 Nasıl kurulur? (resimli)' rehberi eklendi (yazdırılabilir). Yapıştırılan anahtarlar kendiliğinden temizlenir; yanlış bölüme yazılan anahtar için uyarı."
     }
   },
   "kabuk": {
