@@ -2,18 +2,18 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "12.11.2026",
+      "surum": "13.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Düzeltme: MEBBİS'ten güzergah alırken aynı araç ve şoför başka bir ihaledeki güzergahta da çalışıyorsa öğrenciler artık o güzergaha atılmaz, yeni güzergah açılır. İhale no'su yazılı güzergah yalnız kendi ihale no'su ya da aynı güzergah no ile eşleşir; tahmini eşleşmeler (plaka/şoför, ad) işaretsiz gelir. Servis Bilgileri'nde İhale No ve İş artışı."
+      "notlar": "Şoför Ara: şoför havuzu indir/yükle (okullar arası paylaşım; hiçbir şoför silinmez, farklar sorulur). 'Mezun Et' düğmesi kaldırıldı: sınıf ve mezun bilgisi MEBBİS'ten gelir; MEBBİS'te olmayan öğrenci Mezun/Nakil olarak ayrılabilir; mezunlar 31 Ekim'e, nakiller sonraki ay sonuna kadar görünür, sonra arşive düşer. Servis Bilgileri'nde ve günlük takipte şoför değişikliği bu aydan geçerli. 'Okulu kaldır' düğmesi."
     }
   },
   "kabuk": {
-    "surum": "1.1.14",
-    "notlar": "MEBBİS'te güzergah ihale (maliyet) numarasıyla tanınır: aynı araç iki güzergahta olsa da açık pencere doğru güzergaha bağlanır; aynı güzergahta araç değişince biten araç gri bilgi olarak görünür, kullanımdaki araç okunur.",
+    "surum": "1.1.15",
+    "notlar": "Deneme programı güncel programla açılır; okul kaldırmadan önce 'Okul kaldırma öncesi' yedeği alınır; MEBBİS güzergah penceresi süreleri mebbis_zaman.log dosyasına yazılır.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "55e718af0e89611e72dee918c6594fa60466148d1e93ee68bb9e143a3aadc9a6"
+        "sha256": "a467fd06523f06c858e741ce92ff6645ff569b1843cc6000e37c5c5d03e495a1"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
