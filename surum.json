@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "13.11.2026",
+      "surum": "14.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Şoför Ara: şoför havuzu indir/yükle (okullar arası paylaşım; hiçbir şoför silinmez, farklar sorulur). 'Mezun Et' düğmesi kaldırıldı: sınıf ve mezun bilgisi MEBBİS'ten gelir; MEBBİS'te olmayan öğrenci Mezun/Nakil olarak ayrılabilir; mezunlar 31 Ekim'e, nakiller sonraki ay sonuna kadar görünür, sonra arşive düşer. Servis Bilgileri'nde ve günlük takipte şoför değişikliği bu aydan geçerli. 'Okulu kaldır' düğmesi."
+      "notlar": "Öğrenci Ara: toplu seçim; aktif öğrenci silinmez, aday listesine alınır; aday/mezun/nakil/arşiv toplu silinir (önce yedek, geri alınabilir); adaylar güzergaha ya da mezun/nakile toplu taşınır. 'Koltuğu olmayanları yerleştir': boş koltuk, gerekirse ön koltuk için yer değiştirme, yer yoksa kapasite üstü koltuk (kırmızı, sebebiyle). 'Koltuk sorunu olanlar' süzgeci ve anasayfa uyarısı."
     }
   },
   "kabuk": {
