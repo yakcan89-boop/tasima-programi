@@ -246,6 +246,13 @@
 <script>
 /* Masaüstü programında prompt() çalışmaz; aynı işi masaüstünün küçük penceresi yapar */
 if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.masaustu.istem(m == null ? '' : String(m), v == null ? '' : String(v));
+/* Windows'ta alert()/confirm() sonrası yazı kutuları klavyeyi alamayabiliyor: uyarıyı masaüstü gösterir, sonra odağı geri verir */
+if (window.masaustu && window.masaustu.uyari) {
+  window.alert = m => { window.masaustu.uyari('bilgi', m == null ? '' : String(m)); };
+  window.confirm = m => !!window.masaustu.uyari('onay', m == null ? '' : String(m));
+}
+/* Eski kabukta yedek çare: pencere odağa döndüğünde ya da tıklanınca yazı kutusuna odak ver */
+document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && document.activeElement !== t) setTimeout(() => { try { t.focus(); } catch (x) {} }, 0); }, true);
 </script>
 <script>
 /* Masaüstü programında "Yükle / Dosya seç" pencereleri Belgeler\Taşıma Programı\İndirilenler klasöründe açılır */
@@ -296,7 +303,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 17.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 18.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
