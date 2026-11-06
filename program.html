@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 12.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 13.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -670,9 +670,8 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <h2 style="margin:0;">Güzergah Şoför & Öğrenci Listesi</h2>
         <div style="display:flex; gap:8px;">
-          <button onclick="promoteClassesAndGraduates()" class="btn-nav btn-purple" style="padding:8px 12px; width:auto;">🎓 Mezun Et & Sınıfları Yükselt</button>
           <button id="mezuniyet-geri-al-btn" onclick="undoMezuniyet()" class="btn-nav btn-red" style="padding:8px 12px; width:auto; display:none;">↩️ Mezuniyeti Geri Al</button>
-          <button onclick="openGraduatesModal()" class="btn-nav btn-orange" style="padding:8px 12px; width:auto;">📂 Mezunları Gör (<span id="grad-count">0</span>)</button>
+          <button onclick="openGraduatesModal()" class="btn-nav btn-orange" style="padding:8px 12px; width:auto;">📂 Mezun / Nakil (<span id="grad-count">0</span>)</button>
           <button onclick="openKontenjanModal()" class="btn-nav btn-teal" style="padding:8px 12px; width:auto;">📊 Kontenjan / Boş Koltuk</button>
           <button onclick="openAdayModal()" class="btn-nav btn-yellow" style="padding:8px 12px; width:auto;">⏸️ Aday Öğrenciler (<span id="aday-count">0</span>)</button>
           <button onclick="runStudentFieldRepair()" class="btn-nav btn-navy" style="padding:8px 12px; width:auto;">🔄 Okul No / Şube / Cinsiyet Tamamla</button>
@@ -1159,6 +1158,9 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           <button onclick="syncDriverPool(true)" class="btn-nav btn-teal" style="padding:6px 12px; width:auto; font-size:12px;">🔄 Güzergahlardan Aktar</button>
           <button onclick="printDriverPoolReport()" class="btn-nav btn-navy" style="padding:6px 12px; width:auto; font-size:12px;">🖨️ Yazdır (A4)</button>
           <button onclick="exportDriverPoolExcel()" class="btn-nav btn-green" style="padding:6px 12px; width:auto; font-size:12px;">📊 Excel'e Aktar</button>
+          <button onclick="soforHavuzuIndir()" class="btn-nav btn-purple" style="padding:6px 12px; width:auto; font-size:12px;" title="Şoför havuzunu diğer okullarla paylaşmak için dosya olarak indirir (öğrenci bilgisi içermez)">⬇️ Havuzu İndir</button>
+          <button onclick="document.getElementById('sofor-havuz-yukle-input').click()" class="btn-nav btn-orange" style="padding:6px 12px; width:auto; font-size:12px;" title="Başka okulun paylaştığı şoför havuzu dosyasını yükler; hiçbir şoför silinmez, farklar size sorulur">⬆️ Havuz Yükle</button>
+          <input type="file" id="sofor-havuz-yukle-input" accept=".json,application/json" style="display:none;" onchange="soforHavuzuYukle(this)">
         </div>
       </div>
 
@@ -1319,6 +1321,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
               <option value="mezun">Mezun Olanlar</option>
               <option value="nakil">Nakil / Ayrılanlar</option>
               <option value="hepsi">Tümü (Aktif + Mezun)</option>
+              <option value="arsiv">Arşiv (eski mezun / nakil)</option>
             </select>
           </div>
           <div>
@@ -1548,9 +1551,10 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="graduates-modal" class="modal">
       <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #ddd; padding-bottom: 8px;">
-          <h3 style="margin:0; color:#800020;">Mezun Olan Öğrenciler</h3>
+          <h3 style="margin:0; color:#800020;">Mezun / Nakil Öğrenciler</h3>
           <span style="font-size:24px; font-weight:bold; cursor:pointer;" onclick="closeGraduatesModal()">&times;</span>
         </div>
+        <div id="graduates-arsiv-bilgi" style="margin-top:8px; font-size:12px;"></div>
         <table class="form-grid" style="margin-top:10px;">
           <thead><tr style="background:#800020; color:#fff;"><th style="width:40px;">S.N.</th><th>ÖĞRENCİ ADI SOYADI</th><th style="width:140px;">GÜZERGAHI</th><th style="width:80px;">ESKİ SINIF</th><th style="width:80px;">DURUMU</th></tr></thead>
           <tbody id="modal-graduates-body"></tbody>
@@ -1799,8 +1803,9 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     let L = []; try { L = JSON.parse(localStorage.getItem(OKUL_LISTE_ANAHTARI) || '[]'); } catch (e) {}
     if (!Array.isArray(L)) L = [];
     if (!L.some(o => o.id === '')) L.unshift({ id: '', ad: '' });
-    const adBul = o => { try { const d = JSON.parse(localStorage.getItem(VERI_TABANI + (o.id ? '__' + o.id : '')) || 'null'); return (d && String(d.okulAdi || '').trim()) || o.ad || ''; } catch (e) { return o.ad || ''; } };
-    return L.map(o => ({ id: o.id, ad: adBul(o) }));
+    const bilgi = o => { try { const d = JSON.parse(localStorage.getItem(VERI_TABANI + (o.id ? '__' + o.id : '')) || 'null');
+      return { ad: (d && String(d.okulAdi || '').trim()) || o.ad || '', guz: d && Array.isArray(d.routes) ? d.routes.length : 0 }; } catch (e) { return { ad: o.ad || '', guz: 0 }; } };
+    return L.map(o => { const b = bilgi(o); return { id: o.id, ad: b.ad, guz: b.guz }; });
   }
   function okulListesiYaz(L) { try { localStorage.setItem(OKUL_LISTE_ANAHTARI, JSON.stringify(L.map(o => ({ id: o.id, ad: o.ad })))); } catch (e) {} }
   function okulDegistir(id) {
@@ -1843,8 +1848,8 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
   function okulSil() {
     const L = okulListesi(); const o = L.find(x => x.id === AKTIF_OKUL);
     if (!AKTIF_OKUL || !o) { alert('İlk okul silinemez; bilgilerini "Verileri Sıfırla" ile boşaltabilirsiniz.'); return; }
-    if (!confirm(`"${o.ad || 'Bu okul'}" programdan kaldırılsın mı?\n\nBütün bilgileri silinir. Silmeden önce yedek alınır (Yedekler klasörü).`)) return;
-    if (window.masaustu && window.masaustu.oncedenYedek) { try { window.masaustu.oncedenYedek('sifirlama_oncesi'); } catch (e) {} }
+    if (!confirm(`"${o.ad || 'Bu okul'}" (${o.guz} güzergah) programdan kaldırılsın mı?\n\nBu okulun bütün bilgileri silinir; diğer okullara dokunulmaz.\nKaldırmadan önce bütün okulların yedeği alınır (Yedekler klasörü, "Okul kaldırma öncesi").`)) return;
+    if (window.masaustu && window.masaustu.oncedenYedek) { try { window.masaustu.oncedenYedek('Okul kaldırma öncesi'); } catch (e) {} }
     else { try { exportBackup(); } catch (e) {} }
     try { localStorage.removeItem(VERI_ANAHTARI); } catch (e) {}
     okulListesiYaz(L.filter(x => x.id !== AKTIF_OKUL));
@@ -1865,10 +1870,11 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     k.innerHTML = `<span style="font-size:18px;">🏫</span>
       <select id="okul-secici-liste" title="Okul değiştir / yeni okul ekle" style="max-width:440px; padding:6px 8px; border-radius:8px; border:2px solid #fde047; font-weight:bold; font-size:13px; background:#fff; color:#0f172a; cursor:pointer;" onchange="this.value === '__yeni__' ? okulEkle() : okulDegistir(this.value)">
-        ${L.map(o => `<option value="${esc(o.id)}" ${o.id === AKTIF_OKUL ? 'selected' : ''}>${esc(o.ad || '(okul adı yazılmamış)')}</option>`).join('')}
+        ${L.map(o => { const ikiz = o.ad && L.filter(x => x.ad === o.ad).length > 1;   // aynı adlı iki okul: güzergah sayısıyla ayırt edilsin
+          return `<option value="${esc(o.id)}" ${o.id === AKTIF_OKUL ? 'selected' : ''}>${esc(o.ad || '(okul adı yazılmamış)')}${ikiz ? ` — ${o.guz} güzergah` : ''}</option>`; }).join('')}
         <option value="__yeni__">➕ Yeni okul ekle…</option>
       </select>
-      ${L.length > 1 && AKTIF_OKUL ? '<a href="javascript:void(0)" onclick="okulSil()" title="Bu okulu programdan kaldır" style="color:#fecaca; font-size:11px; white-space:nowrap;">kaldır</a>' : ''}`;
+      ${L.length > 1 && AKTIF_OKUL ? '<button type="button" onclick="okulSil()" title="Bu okulu programdan kaldır (önce bütün okulların yedeği alınır)" style="background:#7f1d1d; color:#fff; border:1px solid #fecaca; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">🗑 Okulu kaldır</button>' : ''}`;
     // yeni eklenen okulun adı Merkez okul adına yazılsın
     const el = document.getElementById('okul-adi'); const ben = L.find(o => o.id === AKTIF_OKUL);
     if (el && !String(el.value || '').trim()) {
@@ -2767,7 +2773,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     document.getElementById('dash-total-students').innerText = totalStudCount;
     document.getElementById('dash-total-drivers').innerText = routes.length;
     const gradEl = document.getElementById('grad-count');
-    if (gradEl) gradEl.innerText = graduatedStudents.length;
+    if (gradEl) gradEl.innerText = gorunurAyrilanlar().length;
 
     const teacherEl = document.getElementById('dash-total-teachers');
     if (teacherEl) {
@@ -2880,7 +2886,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     return routes.map(r => {
       const kapasite = parseInt(r.cap) || 16;
       const mevcut = (students[r.id] || []).filter(s => s.name && s.name.trim()).length;
-      const ayrilanlar = (graduatedStudents || []).filter(g => String(g.routeId) === String(r.id));
+      const ayrilanlar = gorunurAyrilanlar().filter(g => String(g.routeId) === String(r.id));
       const mezun = ayrilanlar.filter(g => g.tur !== 'NAKİL').length;
       const nakil = ayrilanlar.filter(g => g.tur === 'NAKİL').length;
       return {
@@ -3630,9 +3636,9 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     html += bolum('Eşleştirme notları ve vakit farkları',
       arac.filter(a => a.f.length).map(a => `<div style="padding:3px 0"><b>${esc(a.g.guzNo)}:</b> ${a.f.join(' · ')}</div>`).join(''), '#b45309');
     const yokAcik = { kirmizi: "MEBBİS'te <b>başka bir araçta</b> — o güzergah alınınca oraya taşınır; şimdilik dokunulmaz", gri: "MEBBİS'te <b>hiçbir araçta değil</b>", liste: "MEBBİS'te okulun <b>taşınan öğrenci listesinde yok</b>", tcyok: '<span style="color:#b45309">programda T.C. yok, eşleştirilemedi</span>' };
-    html += bolum('Programda bu güzergahta ama MEBBİS\'te bu araçta değil — <u>hiçbiri silinmez</u>; isterseniz aday listesine alın',
+    html += bolum('Programda bu güzergahta ama MEBBİS\'te bu araçta değil — <u>hiçbiri silinmez</u>; isterseniz aday, mezun ya da nakil olarak ayırın',
       mebbisteYok.map((m, i) => (m.durum === 'gri' || m.durum === 'liste')
-        ? `<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid #fee2e2"><input type="checkbox" data-mdy="${i}" style="margin-top:3px"><span><b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}: ${yokAcik[m.durum]} → <b>aday listesine al</b></span></label>`
+        ? `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #fee2e2"><select data-mdy="${i}" style="width:auto;font-size:12px;padding:2px 4px"><option value="">— dokunma —</option><option value="aday">Aday listesine al</option><option value="MEZUN">Mezun</option><option value="NAKİL">Nakil</option></select><span><b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}: ${yokAcik[m.durum]}</span></div>`
         : `<div style="padding:4px 0">• <b>${esc(m.s.name)}</b> (${esc(m.s.grade || '')}) — ${rAd(m.r)}: ${yokAcik[m.durum]}</div>`).join(''), '#b91c1c');
     html += bolum('MEBBİS\'te hiçbir araca yerleştirilmemiş öğrenciler',
       [...gri.values()].map(o => `<div style="padding:3px 0">• ${esc(formatNameCase(o.ad))} (${esc(o.sinif)})</div>`).join(''), '#6b7280');
@@ -3816,11 +3822,15 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
   function mebbisServisUygula() {
     const S = mebbisServisSon; if (!S) return;
     const secili = [...document.querySelectorAll('#mebbis-servis-modal [data-mds]')].filter(c => c.checked).map(c => S.degis[+c.getAttribute('data-mds')]);
-    const adaya = [...document.querySelectorAll('#mebbis-servis-modal [data-mdy]')].filter(c => c.checked).map(c => (S.mebbisteYok || [])[+c.getAttribute('data-mdy')]).filter(Boolean);
+    const adaya = [...document.querySelectorAll('#mebbis-servis-modal [data-mdy]')].filter(c => c.value).map(c => { const m = (S.mebbisteYok || [])[+c.getAttribute('data-mdy')]; return m ? Object.assign({}, m, { ne: c.value }) : null; }).filter(Boolean);
     if (!secili.length && !adaya.length) { if (S.tur) { mebbisServisTurGec(true); return; } alert('Hiçbir değişiklik seçilmedi.'); return; }
     if (!confirm(`${secili.length + adaya.length} değişiklik uygulanacak.\n\nMevcut koltuk yerleri korunur; yeri değişen öğrenci yeni aracında boş koltuğa yerleşir. Hiçbir öğrenci silinmez. Devam edilsin mi?`)) return;
     const etkilenen = new Set(), sonuc = [];
-    adaya.forEach(m => {               // MEBBİS'te araçta olmayan öğrenci: silinmez, aday listesine alınır
+    adaya.forEach(m => {               // MEBBİS'te araçta olmayan öğrenci: silinmez; aday listesine ya da mezun/nakil kaydına geçer
+      if (m.ne === 'MEZUN' || m.ne === 'NAKİL') {
+        if (ogrenciAyir(m.r, m.s, m.ne)) { etkilenen.add(m.r); sonuc.push(`${m.s.name} → ${m.ne === 'NAKİL' ? 'nakil' : 'mezun'} (${m.r.no} NOLU GÜZERGAH'tan)`); }
+        return;
+      }
       const L = students[m.r.id] || []; const i = L.indexOf(m.s); if (i < 0) return;
       L.splice(i, 1); candidateStudents.push(m.s); etkilenen.add(m.r);
       sonuc.push(`${m.s.name} → aday listesi (${m.r.no} NOLU GÜZERGAH'tan alındı)`);
@@ -6065,6 +6075,125 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     return rows;
   }
 
+  /* ŞOFÖR HAVUZU PAYLAŞIMI
+     İndir: havuzdaki şoförler (ad, T.C., telefon, plaka, model yılı, ehliyet, kapasite) tek dosyaya yazılır; öğrenci/okul verisi girmez.
+     Yükle: hiçbir şoför silinmez. Şoför önce T.C. ile, T.C. yoksa ad + plaka ile tanınır.
+       yeni şoför → eklenir (işaretli) · boş alan dosyada dolu → doldurulur (işaretli)
+       ikisi de dolu ve farklı → yan yana gösterilir, İŞARETSİZ (okul seçer) · aynı ad farklı T.C. → ayrı kişi, işaretsiz sorulur
+       geçersiz T.C. (algoritmaya uymayan) → yazılmaz. */
+  const HAVUZ_ALANLAR = [['tc', 'T.C.'], ['phone', 'Telefon'], ['plate', 'Plaka'], ['modelYear', 'Model yılı'], ['license', 'Ehliyet'], ['cap', 'Kapasite']];
+  function soforHavuzuIndir() {
+    const soforler = (driverPool || []).filter(x => x && String(x.name || '').trim()).map(x => {
+      const o = { name: formatNameCase(x.name) }; HAVUZ_ALANLAR.forEach(([k]) => { if (x[k] !== undefined && String(x[k]).trim() !== '') o[k] = x[k]; }); return o;
+    });
+    if (!soforler.length) { alert('Şoför havuzu boş.'); return; }
+    const paket = { tur: 'sofor-havuzu', surum: 1, olusturan: bizimOkulAdi(), tarih: new Date().toISOString(), soforler };
+    const blob = new Blob([JSON.stringify(paket, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    const d = new Date(); a.download = `sofor-havuzu_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    alert(`${soforler.length} şoför dosyaya yazıldı.\n\nDosyada şoförlerin T.C., telefon ve ehliyet bilgileri var; yalnız taşıma işi için okullarla paylaşın.`);
+  }
+  let havuzYukleSon = null;
+  function soforHavuzuYukle(input) {
+    const f = input && input.files && input.files[0]; if (!f) return;
+    const okuyucu = new FileReader();
+    okuyucu.onload = () => {
+      input.value = '';
+      let paket; try { paket = JSON.parse(okuyucu.result); } catch (e) { alert('Dosya okunamadı (bozuk ya da şoför havuzu dosyası değil).'); return; }
+      if (!paket || paket.tur !== 'sofor-havuzu' || !Array.isArray(paket.soforler)) { alert('Bu dosya bir şoför havuzu dosyası değil.\n\nŞoför Ara sayfasındaki "⬇️ Havuzu İndir" ile oluşturulan dosyayı seçin.'); return; }
+      soforHavuzuKarsilastir(paket);
+    };
+    okuyucu.readAsText(f, 'utf-8');
+  }
+  function soforHavuzuKarsilastir(paket) {
+    const temizTc = t => String(t == null ? '' : t).replace(/\D/g, '');
+    const P = x => String(x || '').toLocaleUpperCase('tr-TR').replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '');
+    const satirlar = [];   // { tip, s (dosya), m (havuz|null), alan, eski, yeni, isaret, not }
+    (paket.soforler || []).forEach(raw => {
+      const ad = formatNameCase(String(raw.name || '').trim()); if (!ad) return;
+      const s = Object.assign({}, raw, { name: ad });
+      const tc = temizTc(s.tc); let tcNot = '';
+      if (tc && !tcGecerliMi(tc)) { tcNot = `geçersiz T.C. (${s.tc}) — yazılmaz`; delete s.tc; } else if (tc) s.tc = tc; else delete s.tc;
+      if (s.plate) s.plate = String(s.plate).toLocaleUpperCase('tr-TR').trim();
+      let m = null, ayriKisi = false;
+      if (s.tc) {
+        m = driverPool.find(x => temizTc(x.tc) === s.tc) || null;
+        if (!m) { const n = driverPool.find(x => driverKey(x.name) === driverKey(ad)); if (n) { if (temizTc(n.tc)) ayriKisi = true; else m = n; } }
+      } else {
+        const adaUyan = driverPool.filter(x => driverKey(x.name) === driverKey(ad));
+        m = adaUyan.find(x => !s.plate || !x.plate || P(x.plate) === P(s.plate)) || null;
+      }
+      if (!m) {
+        satirlar.push({ tip: 'yeni', s, m: null, isaret: !ayriKisi, not: (ayriKisi ? 'havuzda aynı adla farklı T.C.\'li bir şoför var — ayrı kişi mi? Öyleyse işaretleyin' : '') + (tcNot ? (ayriKisi ? '; ' : '') + tcNot : '') });
+        return;
+      }
+      if (String(m.name || '') !== ad) satirlar.push({ tip: 'alan', s, m, alan: 'name', ad: 'Ad', eski: m.name, yeni: ad, isaret: false });
+      HAVUZ_ALANLAR.forEach(([k, etiket]) => {
+        const yeni = s[k] === undefined || s[k] === null ? '' : String(s[k]).trim(); if (!yeni) return;
+        const eski = String(m[k] == null ? '' : m[k]).trim();
+        const ayni = k === 'plate' ? P(eski) === P(yeni) : (k === 'tc' || k === 'phone' ? eski.replace(/\D/g, '') === yeni.replace(/\D/g, '') : eski.toLocaleLowerCase('tr-TR') === yeni.toLocaleLowerCase('tr-TR'));
+        if (ayni) return;
+        satirlar.push({ tip: 'alan', s, m, alan: k, ad: etiket, eski, yeni, isaret: !eski });
+      });
+      if (tcNot) satirlar.push({ tip: 'bilgi', s, m, not: tcNot });
+    });
+    havuzYukleSon = { satirlar, paket };
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const yeniSay = satirlar.filter(x => x.tip === 'yeni').length, dolSay = satirlar.filter(x => x.tip === 'alan' && !x.eski).length, farkSay = satirlar.filter(x => x.tip === 'alan' && x.eski).length;
+    let html = '';
+    const grup = (baslik, renk, liste) => { if (!liste.length) return; html += `<div style="margin-top:12px;font-weight:700;color:${renk}">${baslik} (${liste.length})</div>` + liste.map(x => x.html).join(''); };
+    const kutu = (i, x, metin) => ({ html: `<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid #eef2f7;cursor:pointer"><input type="checkbox" data-hv="${i}" ${x.isaret ? 'checked' : ''} style="width:auto;margin-top:3px"><span>${metin}</span></label>` });
+    grup('Yeni şoför — havuza eklenecek', '#15803d', satirlar.map((x, i) => x.tip !== 'yeni' ? null : kutu(i, x, `<b>${esc(x.s.name)}</b> · ${esc(x.s.plate || '—')} · ${esc(x.s.phone || '—')}${x.s.tc ? ' · T.C. ' + esc(x.s.tc) : ''}${x.not ? ` <span style="color:#b45309">(${esc(x.not)})</span>` : ''}`)).filter(Boolean));
+    grup('Havuzda boş, dosyada dolu — doldurulacak', '#1d4ed8', satirlar.map((x, i) => x.tip !== 'alan' || x.eski ? null : kutu(i, x, `<b>${esc(x.m.name)}</b> · ${esc(x.ad)}: <b>${esc(x.yeni)}</b>`)).filter(Boolean));
+    grup('Farklı bilgi — hangisi doğruysa siz seçin (işaretlerseniz dosyadaki yazılır)', '#b45309', satirlar.map((x, i) => x.tip !== 'alan' || !x.eski ? null : kutu(i, x, `<b>${esc(x.m.name)}</b> · ${esc(x.ad)}: bizde <b>${esc(x.eski)}</b> → dosyada <b>${esc(x.yeni)}</b>`)).filter(Boolean));
+    grup('Bilgi', '#b91c1c', satirlar.map(x => x.tip !== 'bilgi' ? null : { html: `<div style="padding:3px 0">• <b>${esc(x.m.name)}</b>: ${esc(x.not)}</div>` }).filter(Boolean));
+    if (!satirlar.length) html = `<div style="padding:12px;background:#ecfdf5;border-radius:8px;color:#065f46;font-weight:700">✅ Dosyadaki ${(paket.soforler || []).length} şoförün bilgileri havuzunuzla aynı. Değişecek bir şey yok.</div>`;
+    let k = document.getElementById('havuz-yukle-modal'); if (k) k.remove();
+    k = document.createElement('div'); k.id = 'havuz-yukle-modal';
+    k.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:16px';
+    k.innerHTML = `<div style="background:#fff;border-radius:12px;width:100%;max-width:820px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,.35)">
+      <div style="padding:14px 18px;background:#4b3f8c;color:#fff;border-radius:12px 12px 0 0;font-weight:700;font-size:16px">⬆️ Şoför Havuzu Yükle</div>
+      <div style="padding:12px 18px;overflow:auto">
+        <div style="color:#475569;font-size:13px">Dosya: <b>${esc(paket.olusturan || '—')}</b> · ${esc(paket.tarih ? new Date(paket.tarih).toLocaleDateString('tr-TR') : '')} · ${(paket.soforler || []).length} şoför. <b>Hiçbir şoför silinmez.</b> ${yeniSay} yeni · ${dolSay} doldurulacak · ${farkSay} farklı.</div>
+        ${html}</div>
+      <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end">
+        ${satirlar.some(x => x.tip !== 'bilgi') ? `<button type="button" onclick="soforHavuzuUygula()" style="background:#4b3f8c;color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Seçilenleri Uygula</button>` : ''}
+        <button type="button" onclick="document.getElementById('havuz-yukle-modal').remove()" style="background:#e2e8f0;border:0;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer">Kapat</button></div></div>`;
+    document.body.appendChild(k);
+  }
+  function soforHavuzuUygula() {
+    const S = havuzYukleSon; if (!S) return;
+    const secili = [...document.querySelectorAll('#havuz-yukle-modal [data-hv]')].filter(c => c.checked).map(c => S.satirlar[+c.getAttribute('data-hv')]).filter(Boolean);
+    if (!secili.length) { alert('Hiçbir satır seçilmedi.'); return; }
+    let eklenen = 0, guncellenen = 0;
+    secili.forEach(x => {
+      if (x.tip === 'yeni') {
+        const o = { name: x.s.name, not: '' }; HAVUZ_ALANLAR.forEach(([k]) => { o[k] = x.s[k] !== undefined ? x.s[k] : ''; });
+        driverPool.push(o); eklenen++; return;
+      }
+      if (x.tip !== 'alan') return;
+      const m = x.m, eskiAd = m.name;
+      m[x.alan] = x.alan === 'cap' ? (parseInt(String(x.yeni).replace(/\D/g, ''), 10) || '') : x.yeni;
+      guncellenen++;
+      (routes || []).forEach(r => {            // bu şoförün güzergahlarına da işlensin (plaka bu aydan geçerli)
+        if (driverKey(r.driver) !== driverKey(eskiAd)) return;
+        if (x.alan === 'name') r.driver = m.name;
+        if (x.alan === 'tc') r.tcNo = m.tc;
+        if (x.alan === 'phone') r.phone = m.phone;
+        if (x.alan === 'modelYear') r.modelYear = m.modelYear;
+        if (x.alan === 'license') r.license = m.license;
+        if (x.alan === 'plate') rotaBilgiDegistir(r, 'plate', m.plate);
+      });
+    });
+    driverPool.sort((a, b) => String(a.name).localeCompare(String(b.name), 'tr-TR'));
+    const k = document.getElementById('havuz-yukle-modal'); if (k) k.remove();
+    havuzYukleSon = null;
+    saveDataToStorage(); renderDriverPool(); try { refreshAllRouteViews(); } catch (e) {}
+    alert(`Şoför havuzu güncellendi.\n\n• ${eklenen} yeni şoför eklendi\n• ${guncellenen} bilgi güncellendi\n\nHiçbir şoför silinmedi.`);
+  }
+  window.soforHavuzuIndir = soforHavuzuIndir; window.soforHavuzuYukle = soforHavuzuYukle; window.soforHavuzuUygula = soforHavuzuUygula;
+
   function exportDriverPoolExcel() {
     const rows = getDriverPoolExportRows();
     if (rows.length <= 1) { alert('Aktarılacak kayıt bulunamadı.'); return; }
@@ -6102,18 +6231,48 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     document.body.classList.remove('printing-driver-pool');
   }
 
-  function openGraduatesModal() {
+  /* MEZUN / NAKİL GÖRÜNÜRLÜĞÜ
+     Sınıf atlama ve mezuniyet MEBBİS'ten öğrenci listesi çekilince güncellenir ("Mezun Et" düğmesi kaldırıldı).
+     Mezun kaydı yeni öğrenciyi yerleştirirken ("şu öğrenciyi tanıyor musunuz?") eski güzergahını görmek içindir:
+       • MEZUN  → ayrıldığı yılın 31 Ekim'ine kadar görünür (Kasım–Aralık'ta ayrıldıysa ertesi yılın 31 Ekim'i)
+       • NAKİL  → ayrıldığı aydan sonraki ayın son gününe kadar görünür
+     Süresi dolan kayıt silinmez, arşive düşer ("Arşivdekiler de görünsün" ile bulunur). Tarihsiz eski kayıtlar arşivdedir. */
+  function ayrilanBitis(g) {
+    const t = g && g.ayrilis ? new Date(g.ayrilis) : null;
+    if (!t || isNaN(t)) return null;
+    if (g.tur === 'NAKİL') return new Date(t.getFullYear(), t.getMonth() + 2, 0, 23, 59, 59);
+    const y = t.getMonth() >= 10 ? t.getFullYear() + 1 : t.getFullYear();
+    return new Date(y, 9, 31, 23, 59, 59);
+  }
+  function ayrilanGorunur(g) { const b = ayrilanBitis(g); return !!b && new Date() <= b; }
+  window.ayrilanGorunur = ayrilanGorunur;
+  function gorunurAyrilanlar() { return (graduatedStudents || []).filter(ayrilanGorunur); }
+  /* MEBBİS'te olmayan öğrenciyi mezun/nakil olarak ayır: güzergahtan çıkar, eski güzergahıyla kaydet */
+  function ogrenciAyir(r, s, tur) {
+    const L = students[r.id] || []; const i = L.indexOf(s); if (i < 0) return false;
+    L.splice(i, 1);
+    graduatedStudents.push({ name: s.name, grade: s.grade || '', sube: s.sube || '', okulNo: s.okulNo || '', tc: s.tc || '', cinsiyet: s.cinsiyet || '',
+      routeId: r.id, guzergahAd: guzergahTamAdi(r), tur: tur === 'NAKİL' ? 'NAKİL' : 'MEZUN', ayrilis: new Date().toISOString() });
+    return true;
+  }
+  function openGraduatesModal(arsivDe) {
     const tbody = document.getElementById('modal-graduates-body');
     if (!tbody) return;
     tbody.innerHTML = '';
-    if (graduatedStudents.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Henüz mezun öğrenci bulunmuyor.</td></tr>';
+    const tumu = graduatedStudents || [];
+    const liste = arsivDe ? tumu : tumu.filter(ayrilanGorunur);
+    const arsivSay = tumu.length - tumu.filter(ayrilanGorunur).length;
+    const bilgi = document.getElementById('graduates-arsiv-bilgi');
+    if (bilgi) bilgi.innerHTML = `<label style="cursor:pointer;"><input type="checkbox" ${arsivDe ? 'checked' : ''} onchange="openGraduatesModal(this.checked)" style="width:auto;"> Arşivdekiler de görünsün (${arsivSay})</label>
+      <span style="color:#64748b; font-size:11px; margin-left:8px;">Mezunlar ayrıldıkları yılın 31 Ekim'ine, nakiller sonraki ayın sonuna kadar görünür; sonra arşive düşer, silinmez.</span>`;
+    if (liste.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${arsivSay && !arsivDe ? 'Görünen mezun/nakil yok (arşivde ' + arsivSay + ' kayıt var).' : 'Henüz mezun öğrenci bulunmuyor.'}</td></tr>`;
     } else {
       const mezunParca = [];
       const rotaAdi = {};
       routes.forEach(r => { rotaAdi[r.id] = guzergahTamAdi(r); });
-      graduatedStudents.forEach((g, idx) => {
-        const rName = rotaAdi[g.routeId] || `Güzergah #${g.routeId}`;
+      liste.forEach((g, idx) => {
+        const rName = rotaAdi[g.routeId] || g.guzergahAd || `Güzergah #${g.routeId}`;
         const tur = g.tur === 'NAKİL' ? '<b style="color:#a16207;">NAKİL</b>' : '<b style="color:#800020;">MEZUN</b>';
         mezunParca.push(`<tr><td style="text-align:center;">${idx+1}</td><td><b>${g.name}</b></td><td>${rName}</td><td style="text-align:center;">${formatSinifSube(g.grade, g.sube)}</td><td style="text-align:center;">${tur}</td></tr>`);
       });
@@ -6243,12 +6402,12 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const r = routes[i];
     if (!r) return;
     const temiz = formatNameCase(String(ad || '').trim());
-    r.driver = temiz;
+    rotaBilgiDegistir(r, 'driver', temiz);           // içinde bulunulan aydan geçerli; önceki aylar eski şoförle kalır
     const s = havuzdanSofor(temiz);
     if (s) {
       r.tcNo = s.tc || '';
       r.phone = s.phone || '';
-      r.plate = s.plate || '';
+      if (s.plate) rotaBilgiDegistir(r, 'plate', s.plate);
       r.modelYear = s.modelYear || '';
       r.license = s.license || '';
       r.cap = s.cap || '';
@@ -6263,7 +6422,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         }
       }
     } else if (!temiz) {
-      r.tcNo = ''; r.phone = ''; r.plate = ''; r.modelYear = ''; r.license = ''; r.cap = '';
+      r.tcNo = ''; r.phone = ''; rotaBilgiDegistir(r, 'plate', ''); r.modelYear = ''; r.license = ''; r.cap = '';
     }
     refreshAllRouteViews();
   }
@@ -8602,7 +8761,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
   function addOkulNobetYeri() {
     const name = prompt('Yeni nöbet yeri adını girin (örn: KANTİN, LABORATUVAR):');
     if (!name || !name.trim()) return;
-    const upperName = name.trim().toUpperCase();
+    const upperName = name.trim().toLocaleUpperCase('tr-TR');
     if (okulNobetYerleri.includes(upperName)) { alert('Bu nöbet yeri zaten var.'); return; }
     okulNobetYerleri.push(upperName);
     ensureOkulNobetTemplate();
@@ -9731,7 +9890,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const gradTbody = document.getElementById('route-graduates-body');
     const gradCountEl = document.getElementById('route-grad-count');
     if (gradTbody) {
-      const routeGrads = graduatedStudents.filter(g => g.routeId == rId);
+      const routeGrads = gorunurAyrilanlar().filter(g => g.routeId == rId);
       gradTbody.innerHTML = '';
       if (routeGrads.length === 0) {
         gradTbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">Bu güzergahtan henüz mezun öğrenci bulunmuyor.</td></tr>';
@@ -9821,9 +9980,10 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     if (newDriver === null) return;
     const newPlate = prompt('Araç Plakası:', route.plate);
     if (newPlate === null) return;
-    route.name = newName.toUpperCase();
-    route.driver = formatNameCase(newDriver);
-    route.plate = newPlate;
+    route.name = String(newName).toLocaleUpperCase('tr-TR').trim();
+    rotaBilgiDegistir(route, 'driver', formatNameCase(newDriver));     // şoför ve plaka bu aydan geçerli
+    rotaBilgiDegistir(route, 'plate', String(newPlate).toLocaleUpperCase('tr-TR').trim());
+    saveDataToStorage();
     refreshAllRouteViews();
   }
 
@@ -9914,7 +10074,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const plate = prompt('Ek sefer aracının plakasını girin:', routes[routeIdx].plate);
     if (plate === null) return;
     if (!routes[routeIdx].ekSeferler) routes[routeIdx].ekSeferler = [];
-    routes[routeIdx].ekSeferler.push({ name: formatNameCase(name), plate: plate.trim().toUpperCase() });
+    routes[routeIdx].ekSeferler.push({ name: formatNameCase(name), plate: plate.trim().toLocaleUpperCase('tr-TR') });
     refreshAllRouteViews();
   }
 
@@ -11692,12 +11852,14 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       });
     }
 
-    if (status === 'mezun' || status === 'nakil' || status === 'hepsi') {
+    if (status === 'mezun' || status === 'nakil' || status === 'hepsi' || status === 'arsiv') {
       const rotaHaritasi = {};
       routes.forEach(r => { rotaHaritasi[r.id] = r; });
       (graduatedStudents || []).forEach((g, gIdx) => {
         const gTur = g.tur === 'NAKİL' ? 'nakil' : 'mezun';
-        if (status !== 'hepsi' && status !== gTur) return;
+        const gorunur = ayrilanGorunur(g);
+        if (status === 'arsiv') { if (gorunur) return; }
+        else { if (!gorunur) return; if (status !== 'hepsi' && status !== gTur) return; }
         if (routeFilter && String(g.routeId) !== String(routeFilter)) return;
         if (gradeFilter && String(g.grade || '').trim() !== gradeFilter) return;
         if (!matches(g.name, g.tc, g.okulNo)) return;
@@ -11710,7 +11872,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           cinsiyet: g.cinsiyet || '',
           tc: g.tc || '',
           routeId: g.routeId,
-          routeName: r ? guzergahTamAdi(r) : `Güzergah #${g.routeId}`,
+          routeName: r ? guzergahTamAdi(r) : (g.guzergahAd || `Güzergah #${g.routeId}`),
           driver: r ? formatNameCase(r.driver || '') : '—',
           plate: r ? (r.plate || '') : '—',
           seat: '',
