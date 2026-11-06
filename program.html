@@ -215,7 +215,8 @@
   @media print {
     body { background: #fff; padding: 0; }
     .sidebar, .no-print, .modal { display: none !important; }
-    .content { border: none; padding: 0; background: transparent; overflow: visible; }
+    .content { border: none; padding: 0; background: transparent; overflow: visible; min-height: 0 !important; }
+    .container { min-height: 0 !important; }
     .editable-date-input { border: none !important; background: transparent !important; width: auto !important; }
 
     body:not(.printing-route-report):not(.printing-duty-report):not(.printing-batch-daily):not(.printing-inspection):not(.printing-batch-inspection):not(.printing-batch-puantaj):not(.printing-ozel-egitim):not(.printing-seating-plan):not(.printing-batch-student-lists):not(.printing-batch-seating-plans):not(.printing-servis-list):not(.printing-okul-nobet):not(.printing-student-search):not(.printing-driver-pool):not(.printing-liste-koltuk):not(.printing-batch-liste-koltuk) .page { display: none !important; }
@@ -303,7 +304,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 20.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 21.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -11503,9 +11504,31 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </div>`;
     });
 
+    // Puantaj yatay A4 basılır; her sayfa (seçilen güzergah sayısı) tek kâğıda sığacak kadar küçültülür
+    puantajSayfalariniSigdir(container);
+    const yon = document.createElement('style'); yon.id = 'puantaj-yazdir-yon';
+    yon.textContent = '@media print{@page{size:A4 landscape;margin:7mm}}';
+    document.head.appendChild(yon);
     document.body.classList.add('printing-batch-puantaj');
-    window.print();
-    document.body.classList.remove('printing-batch-puantaj');
+    try { window.print(); }
+    finally { document.body.classList.remove('printing-batch-puantaj'); yon.remove(); }
+  }
+  // yatay A4 (kenar 0,4 inç'e kadar) yazılabilir alan ≈ 1050 × 717 px; payla 1040 × 690
+  function puantajSayfalariniSigdir(container) {
+    const GEN = 1040, YUK = 680;
+    const olc = document.createElement('div');
+    olc.setAttribute('style', `position:absolute; left:-30000px; top:0; visibility:hidden; pointer-events:none; background:#fff; width:${GEN}px;`);
+    document.body.appendChild(olc);
+    container.querySelectorAll('.sheet-wrapper').forEach(w => {
+      w.style.zoom = ''; w.style.width = '';
+      olc.innerHTML = w.outerHTML;
+      const k = olc.firstElementChild;
+      const h = k.scrollHeight, wd = Math.max(k.scrollWidth, GEN);
+      const z = Math.min(1, YUK / h, GEN / wd);
+      w.style.width = GEN + 'px';
+      if (z < 0.999) w.style.zoom = z.toFixed(3);
+    });
+    olc.remove();
   }
 
   function togglePuantajCell(key) {
