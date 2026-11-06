@@ -2,22 +2,22 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "15.11.2026",
+      "surum": "16.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Anasayfa'da Kurum Kodu: MEBBİS'ten veri çekilince kendiliğinden yazılır; aynı kurum kodu iki okulda olamaz; MEBBİS'teki okul ile programda açık okul farklıysa uyarılır; başka okulun yedeği yüklenirken uyarılır."
+      "notlar": "Anasayfa'da BULUT EŞİTLEME (TELEGRAM) şeridi: okulun verisi kendi Telegram kanalınıza şifreli gönderilir, diğer bilgisayarlarınız açılışta en yenisini alır. Başka bilgisayarda kurum kodu + şifre + bağlantı anahtarı ile okul verisi çekilir: o okul varsa güncellenir, yoksa yeni okul eklenir."
     }
   },
   "kabuk": {
-    "surum": "1.1.16",
-    "notlar": "MEBBİS'ten veri çekerken okulun kurum kodu okunur; programda açık okul ile MEBBİS'teki okul farklıysa aktarımdan önce sorulur.",
+    "surum": "1.1.17",
+    "notlar": "Bulut eşitleme (Telegram): okulun verisi kendi Telegram kanalınıza şifreli gider; diğer bilgisayarlar açılışta en yenisini alır.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "15d33c662106ef51afd9dc9613c311e10f1ffba58a44113146bd44bab758314b"
+        "sha256": "6545d3dd375c680dbab631b22151567b650ed4b7b5e99f80d13368d96e3727b7"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
-        "sha256": "00a1d915335bdbd5d909ae87aa135f0aa1ea8f6e3f7ff9a45d04fe4cb3df0d78"
+        "sha256": "b9df8b97e7cea027afb19c3528ee4b26d237c7cd63051be8192374c4aea6f4b5"
       },
       "preload_mebbis.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload_mebbis.js",
