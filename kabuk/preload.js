@@ -23,6 +23,8 @@ try { contextBridge.exposeInMainWorld('masaustu', { mebbisAc: () => ipcRenderer.
   // güzergah güzergah yerleştirme: sıradaki güzergahın penceresini aç
   mebbisSiradaki: o => ipcRenderer.send('mebbis-siradaki', o && typeof o === 'object' ? { bitti: !!o.bitti } : {}),
   // güzergah güzergah programa alma: { bitti } bu güzergah tamam / { dur } turu bırak
+  // bulut eşitleme (Telegram): { op: 'durum'|'kur'|'cek'|'gonder'|'kontrol'|'indir'|'kapat', kurumKodu, ... }
+  bulut: o => ipcRenderer.invoke('bulut', o && typeof o === 'object' ? JSON.parse(JSON.stringify(o)) : {}),
   mebbisServisSiradaki: o => ipcRenderer.send('mebbis-servis-siradaki', o && typeof o === 'object' ? { bitti: !!o.bitti, dur: !!o.dur } : {}),
   // dosya seçme penceresi İndirilenler klasöründe açılır
   dosyaSec: o => { try { return ipcRenderer.sendSync('dosya-sec', o); } catch (e) { return null; } },

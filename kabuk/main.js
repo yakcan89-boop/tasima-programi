@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.16';
+const KABUK_SURUM = '1.1.17';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -503,6 +503,147 @@ function mebbisIndirmeYakala() {
   });
 }
 global.__dbg = [];
+/* ===================== BULUT EŞİTLEME (TELEGRAM) =====================
+   Okulun verisi bilgisayarda şifrelenip (AES-256-GCM, anahtar = PBKDF2(şifre, "tasima|<kurum kodu>")) okulun kendi
+   Telegram botuyla kendi gizli kanalına gönderilir; kanalda SABİTLENMİŞ mesaj hep en güncel dosyadır (eskiler geçmiş olarak kalır).
+   Ayarlar kurum koduna göre Belgeler\Taşıma Programı\bulut.json'da; bot anahtarı ve şifre anahtarı Windows'un kendi
+   şifrelemesiyle (safeStorage) saklanır. Şifrenin kendisi hiçbir yere yazılmaz. Telegram uygulaması gerekmez. */
+const TG_URL = process.env.TASIMA_TG_URL || 'https://api.telegram.org';
+const bulutYol = () => path.join(yollar().kok, 'bulut.json');
+function bulutAyarOku() { try { const v = JSON.parse(fs.readFileSync(bulutYol(), 'utf8')); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
+function bulutAyarYaz(v) { try { fs.mkdirSync(path.dirname(bulutYol()), { recursive: true }); fs.writeFileSync(bulutYol(), JSON.stringify(v, null, 1), 'utf8'); } catch (e) {} }
+function gizle(str) {
+  try { const { safeStorage } = require('electron'); if (safeStorage && safeStorage.isEncryptionAvailable()) return 'S:' + safeStorage.encryptString(String(str)).toString('base64'); } catch (e) {}
+  return 'P:' + Buffer.from(String(str)).toString('base64');
+}
+function acGizli(v) {
+  v = String(v || ''); if (!v) return '';
+  if (v.startsWith('S:')) { const { safeStorage } = require('electron'); return safeStorage.decryptString(Buffer.from(v.slice(2), 'base64')); }
+  return Buffer.from(v.slice(2), 'base64').toString();
+}
+function bulutAnahtar(sifre, kurumKodu) { return require('crypto').pbkdf2Sync(String(sifre), 'tasima|' + String(kurumKodu), 200000, 32, 'sha256'); }
+function bulutSifrele(anahtar, metin) {
+  const c = require('crypto'), z = require('zlib');
+  const iv = c.randomBytes(12), ci = c.createCipheriv('aes-256-gcm', anahtar, iv);
+  const g = Buffer.concat([ci.update(z.gzipSync(Buffer.from(metin, 'utf8'))), ci.final()]);
+  return Buffer.concat([Buffer.from('TPB1'), iv, ci.getAuthTag(), g]);
+}
+function bulutCoz(anahtar, buf) {
+  const c = require('crypto'), z = require('zlib');
+  if (buf.slice(0, 4).toString() !== 'TPB1') throw new Error('Bu dosya Taşıma Programı bulut dosyası değil.');
+  const iv = buf.slice(4, 16), tag = buf.slice(16, 32), g = buf.slice(32);
+  const d = c.createDecipheriv('aes-256-gcm', anahtar, iv); d.setAuthTag(tag);
+  let ham; try { ham = Buffer.concat([d.update(g), d.final()]); } catch (e) { throw new Error('ŞİFRE YANLIŞ — dosya açılamadı.'); }
+  return z.gunzipSync(ham).toString('utf8');
+}
+async function tg(token, metod, govde) {
+  let r;
+  try {
+    r = govde instanceof FormData ? await fetch(`${TG_URL}/bot${token}/${metod}`, { method: 'POST', body: govde })
+      : await fetch(`${TG_URL}/bot${token}/${metod}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde || {}) });
+  } catch (e) { const h = new Error("Telegram'a ulaşılamadı (internet yok ya da okul ağında Telegram engelli)."); h.ag = true; throw h; }
+  let j = null; try { j = await r.json(); } catch (e) {}
+  if (!j || !j.ok) { const h = new Error((j && j.description) ? 'Telegram: ' + j.description : 'Telegram hata verdi (' + r.status + ')'); h.kod = r.status; throw h; }
+  return j.result;
+}
+// "Bağlantı anahtarı" = kanal no + bot anahtarı; başka bilgisayarda tek satırla bağlanmak için
+const baglantiYaz = (chatId, token) => 'TPB-' + Buffer.from(String(chatId) + '|' + String(token)).toString('base64');
+function baglantiOku(metin) {
+  metin = String(metin || '').trim();
+  if (metin.startsWith('TPB-')) { const [c, t] = Buffer.from(metin.slice(4), 'base64').toString().split('|'); if (c && t) return { chatId: c, token: t }; }
+  if (/^\d+:[\w-]{20,}$/.test(metin)) return { chatId: '', token: metin };
+  return null;
+}
+async function kanalBul(token) {
+  const L = await tg(token, 'getUpdates', { allowed_updates: ['channel_post', 'my_chat_member'] });
+  const kanallar = [];
+  (L || []).forEach(u => {
+    const ch = (u.channel_post && u.channel_post.chat) || (u.my_chat_member && u.my_chat_member.chat);
+    if (ch && ch.type === 'channel' && !kanallar.some(k => k.id === ch.id)) kanallar.push({ id: ch.id, ad: ch.title || '' });
+  });
+  return kanallar;
+}
+const bulutCaption = (kod, tarih, cihaz) => `TP1|${kod}|${tarih}|${String(cihaz || '').replace(/\|/g, '/')}`;
+function captionOku(c) { const p = String(c || '').split('|'); return p[0] === 'TP1' ? { kurumKodu: p[1], tarih: p[2], cihaz: p[3] || '' } : null; }
+async function sabitlenmis(token, chatId) {
+  const ch = await tg(token, 'getChat', { chat_id: chatId });
+  const m = ch && ch.pinned_message;
+  if (!m || !m.document) return null;
+  const c = captionOku(m.caption); if (!c) return null;
+  return Object.assign(c, { msgId: m.message_id, fileId: m.document.file_id, kanalAd: ch.title || '' });
+}
+async function bulutIndir(token, fileId) {
+  const f = await tg(token, 'getFile', { file_id: fileId });
+  let r; try { r = await fetch(`${TG_URL}/file/bot${token}/${f.file_path}`); } catch (e) { throw new Error("Telegram'dan dosya indirilemedi."); }
+  if (!r.ok) throw new Error('Dosya indirilemedi (' + r.status + ')');
+  return Buffer.from(await r.arrayBuffer());
+}
+ipcMain.handle('bulut', async (e, o) => {
+  o = o || {}; const kod = String(o.kurumKodu || '').replace(/\D/g, '');
+  const A = bulutAyarOku(); const ay = kod ? A[kod] : null;
+  try {
+    if (o.op === 'durum') {
+      if (!ay || !ay.aktif) return { aktif: false, cihaz: (A._cihaz || require('os').hostname()) };
+      return { aktif: true, cihaz: ay.cihaz, kanalAd: ay.kanalAd || '', sonGonderim: ay.sonGonderim || '', bilinen: ay.bilinen || null, baglanti: o.baglantiGoster ? baglantiYaz(ay.chatId, acGizli(ay.token)) : undefined };
+    }
+    if (o.op === 'kur' || o.op === 'cek') {
+      if (!kod || kod.length < 5) return { hata: 'Önce kurum kodu gerekli.' };
+      const b = baglantiOku(o.baglanti); if (!b) return { hata: 'Bot anahtarı ya da bağlantı anahtarı geçersiz. BotFather\'ın verdiği anahtarı (123456789:AA… biçiminde) ya da ilk bilgisayarda gösterilen TPB-… bağlantı anahtarını yapıştırın.' };
+      const ben = await tg(b.token, 'getMe');
+      let chatId = b.chatId, kanalAd = '';
+      if (!chatId) {
+        const K = await kanalBul(b.token);
+        if (!K.length) return { hata: `Bot (@${ben.username}) henüz bir kanalda görünmüyor.\n\n1) Botu gizli kanalınıza YÖNETİCİ olarak ekleyin.\n2) Kanala herhangi bir mesaj yazın (örneğin "deneme").\n3) Sonra burada tekrar deneyin.` };
+        if (K.length > 1 && !o.chatId) return { kanalSec: K, bot: ben.username };
+        chatId = o.chatId || K[0].id; kanalAd = (K.find(k => String(k.id) === String(chatId)) || {}).ad || '';
+      }
+      const anahtar = bulutAnahtar(o.sifre, kod);
+      const cihaz = String(o.cihaz || require('os').hostname()).trim();
+      const pin = await sabitlenmis(b.token, chatId).catch(() => null);
+      if (pin && !kanalAd) kanalAd = pin.kanalAd;
+      if (pin && pin.kurumKodu !== kod) return { hata: `Bu kanaldaki veri başka bir okula ait (kurum kodu ${pin.kurumKodu}).` };
+      let veri = null;
+      if (pin) { const buf = await bulutIndir(b.token, pin.fileId); veri = bulutCoz(anahtar, buf); }   // şifre burada doğrulanır
+      if (o.op === 'cek' && !pin) return { hata: 'Kanalda henüz bu okula ait veri yok. Önce verinin olduğu bilgisayarda "Bu okulu buluta bağla" deyin.' };
+      A._cihaz = cihaz;
+      A[kod] = { aktif: true, token: gizle(b.token), chatId: String(chatId), kanalAd, anahtar: gizle(anahtar.toString('base64')), cihaz,
+        bilinen: pin ? { tarih: pin.tarih, cihaz: pin.cihaz, msgId: pin.msgId } : null, sonGonderim: (ay && ay.sonGonderim) || '' };
+      bulutAyarYaz(A);
+      return { ok: true, bot: ben.username, kanalAd, var: !!pin, veri, uzak: pin ? { tarih: pin.tarih, cihaz: pin.cihaz } : null, baglanti: baglantiYaz(chatId, b.token) };
+    }
+    if (!ay || !ay.aktif) return { hata: 'Bu okul için bulut bağlı değil.' };
+    const token = acGizli(ay.token), anahtar = Buffer.from(acGizli(ay.anahtar), 'base64');
+    if (o.op === 'gonder') {
+      const tarih = new Date().toISOString();
+      const paket = JSON.stringify({ surum: 1, kurumKodu: kod, okulAdi: o.okulAdi || '', tarih, cihaz: ay.cihaz, veri: String(o.veri || '') });
+      const buf = bulutSifrele(anahtar, paket);
+      const fd = new FormData();
+      fd.append('chat_id', String(ay.chatId)); fd.append('caption', bulutCaption(kod, tarih, ay.cihaz)); fd.append('disable_notification', 'true');
+      fd.append('document', new Blob([buf]), `${kod}_tasima.tpb`);
+      const m = await tg(token, 'sendDocument', fd);
+      await tg(token, 'pinChatMessage', { chat_id: ay.chatId, message_id: m.message_id, disable_notification: true });
+      ay.sonGonderim = tarih; ay.bilinen = { tarih, cihaz: ay.cihaz, msgId: m.message_id }; A[kod] = ay; bulutAyarYaz(A);
+      return { ok: true, tarih };
+    }
+    if (o.op === 'kontrol') {
+      const pin = await sabitlenmis(token, ay.chatId);
+      if (!pin) return { ok: true, yeni: false };
+      const bil = ay.bilinen || {};
+      const yeni = String(pin.msgId) !== String(bil.msgId || '') && String(pin.tarih) > String(bil.tarih || '');
+      return { ok: true, yeni, uzak: { tarih: pin.tarih, cihaz: pin.cihaz } };
+    }
+    if (o.op === 'indir') {
+      const pin = await sabitlenmis(token, ay.chatId);
+      if (!pin) return { hata: 'Kanalda veri yok.' };
+      const veri = bulutCoz(anahtar, await bulutIndir(token, pin.fileId));
+      ay.bilinen = { tarih: pin.tarih, cihaz: pin.cihaz, msgId: pin.msgId }; A[kod] = ay; bulutAyarYaz(A);
+      return { ok: true, veri, uzak: { tarih: pin.tarih, cihaz: pin.cihaz } };
+    }
+    if (o.op === 'kapat') { delete A[kod]; bulutAyarYaz(A); return { ok: true }; }
+    return { hata: 'Bilinmeyen işlem' };
+  } catch (x) { return { hata: x.message, ag: !!x.ag }; }
+});
+
 /* KURUM KODU: MEBBİS sayfasının üstündeki "Sn. OKUL ADI ( 731480 )" satırından okunur ve programa bildirilir.
    Program okulun kurum kodunu kaydeder; programda açık okul ile MEBBİS'teki okul farklıysa sorar.
    false dönerse (kullanıcı vazgeçti) aktarım yapılmaz. */
