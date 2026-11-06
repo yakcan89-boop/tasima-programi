@@ -2,18 +2,18 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "14.11.2026",
+      "surum": "15.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Öğrenci Ara: toplu seçim; aktif öğrenci silinmez, aday listesine alınır; aday/mezun/nakil/arşiv toplu silinir (önce yedek, geri alınabilir); adaylar güzergaha ya da mezun/nakile toplu taşınır. 'Koltuğu olmayanları yerleştir': boş koltuk, gerekirse ön koltuk için yer değiştirme, yer yoksa kapasite üstü koltuk (kırmızı, sebebiyle). 'Koltuk sorunu olanlar' süzgeci ve anasayfa uyarısı."
+      "notlar": "Anasayfa'da Kurum Kodu: MEBBİS'ten veri çekilince kendiliğinden yazılır; aynı kurum kodu iki okulda olamaz; MEBBİS'teki okul ile programda açık okul farklıysa uyarılır; başka okulun yedeği yüklenirken uyarılır."
     }
   },
   "kabuk": {
-    "surum": "1.1.15",
-    "notlar": "Deneme programı güncel programla açılır; okul kaldırmadan önce 'Okul kaldırma öncesi' yedeği alınır; MEBBİS güzergah penceresi süreleri mebbis_zaman.log dosyasına yazılır.",
+    "surum": "1.1.16",
+    "notlar": "MEBBİS'ten veri çekerken okulun kurum kodu okunur; programda açık okul ile MEBBİS'teki okul farklıysa aktarımdan önce sorulur.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "a467fd06523f06c858e741ce92ff6645ff569b1843cc6000e37c5c5d03e495a1"
+        "sha256": "15d33c662106ef51afd9dc9613c311e10f1ffba58a44113146bd44bab758314b"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
