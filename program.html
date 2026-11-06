@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 16.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 17.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -326,24 +326,16 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="page-anasayfa" class="page active">
       <div class="no-print" style="background:#1b4958; border-radius:6px; padding:12px 15px; margin-bottom:15px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
         <div style="color:#fff;">
-          <b>💾 VERİ YEDEKLEME:</b>
+          <b>💾 VERİ YEDEKLEME:</b> <span id="bulut-isaret" style="font-size:12px;"></span>
           <span style="font-size:11px; opacity:0.85;">Veriler tarayıcınıza otomatik kaydedilir. Farklı bir bilgisayara taşımak veya güvenli yedek almak için dosya indirin.</span>
         </div>
-        <div style="display:flex; gap:8px; flex-shrink:0;">
+        <div style="display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap;">
           <button onclick="exportBackup()" class="btn-nav btn-green" style="width:auto; padding:9px 16px;">⬇️ Yedek Dosyası İndir</button>
           <button onclick="document.getElementById('backup-file-input').click()" class="btn-nav btn-blue" style="width:auto; padding:9px 16px;">⬆️ Yedekten Geri Yükle</button>
+          <button onclick="bulutPenceresi()" id="bulut-ac-btn" class="btn-nav btn-purple" style="width:auto; padding:9px 16px;" title="Okulun verisini kendi Telegram kanalınız üzerinden diğer bilgisayarlarınızla eşitler (şifreli)">☁️ Bulut</button>
           <input type="file" id="backup-file-input" accept=".json" style="display:none;" onchange="importBackup(this.files[0])">
         </div>
       </div>
-      <div id="bulut-bar" class="no-print" style="background:#4b3f8c; border-radius:6px; padding:12px 15px; margin-bottom:15px; color:#fff;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <div><b>☁️ BULUT EŞİTLEME (TELEGRAM):</b> <span id="bulut-isaret" style="font-size:12px;">—</span>
-            <div style="font-size:11px; opacity:0.85; margin-top:3px;">Okulun verisi kendi Telegram kanalınıza şifreli gönderilir; diğer bilgisayarlarınız açılışta en yenisini alır.</div></div>
-          <button onclick="bulutPenceresi()" id="bulut-ac-btn" class="btn-nav btn-purple" style="width:auto; padding:9px 16px; background:#fff; color:#4b3f8c;">⚙️ Bulut ayarları ▾</button>
-        </div>
-        <div id="bulut-alan" style="display:none; margin-top:10px;"></div>
-      </div>
-
       <div class="dash-grid">
         <div class="dash-card" style="border-left: 4px solid #00a4e4;">
           <div class="dash-card-title">Toplam Taşınan Öğrenci</div>
@@ -1898,14 +1890,14 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const i = document.getElementById('bulut-isaret'); if (!i) return;
     if (!bulutVar()) { i.textContent = 'yalnız masaüstü programında çalışır'; return; }
     const d = BULUT.durum; const kod = kurumKoduAl();
-    i.style.cssText = 'margin-left:8px; padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:bold; cursor:pointer; white-space:nowrap;';
+    i.style.cssText = 'margin-left:10px; padding:3px 10px; border-radius:12px; font-size:11.5px; font-weight:bold; cursor:pointer; white-space:nowrap;';
     i.onclick = () => bulutPenceresi();
-    if (!d || !d.aktif) { i.style.background = '#e2e8f0'; i.style.color = '#475569'; i.textContent = '☁️ bulut kapalı'; i.title = 'Bulut eşitleme bu okul için kapalı'; return; }
+    if (!d || !d.aktif) { i.style.background = '#e2e8f0'; i.style.color = '#475569'; i.textContent = '☁️ bulut kapalı · kur'; i.title = 'Bulut eşitleme bu okul için kapalı — kurmak için tıklayın'; return; }
     if (BULUT.uzakYeni) { i.style.background = '#fde68a'; i.style.color = '#7c2d12'; i.textContent = `☁️⬇ yeni veri: ${BULUT.uzakYeni.cihaz} ${bulutTarih(BULUT.uzakYeni.tarih)} — yükle`; i.title = 'Başka bilgisayarda değişiklik yapıldı'; i.onclick = () => bulutYukle(true); return; }
     const bek = (() => { try { return localStorage.getItem(bulutBekleyenAnahtar(kod)) === '1'; } catch (e) { return false; } })();
     if (BULUT.hata) { i.style.background = '#fee2e2'; i.style.color = '#991b1b'; i.textContent = '☁️✗ ' + (bek ? 'gönderilemedi, bekliyor' : 'bağlantı yok'); i.title = BULUT.hata; return; }
     if (bek) { i.style.background = '#e0f2fe'; i.style.color = '#075985'; i.textContent = '☁️⏳ gönderiliyor'; i.title = 'Değişiklikler birkaç saniye içinde gönderilecek'; return; }
-    i.style.background = '#dcfce7'; i.style.color = '#166534'; i.textContent = '☁️✓ eşit'; i.title = d.sonGonderim ? 'Son gönderim: ' + bulutTarih(d.sonGonderim) : 'Bulut ile eşit';
+    i.style.background = '#dcfce7'; i.style.color = '#166534'; const sonT = d.sonGonderim || (d.bilinen && d.bilinen.tarih); i.textContent = '☁️✓ eşit' + (sonT ? ' (' + bulutTarih(sonT).split(' ')[1] + ')' : ''); i.title = d.sonGonderim ? 'Son gönderim: ' + bulutTarih(d.sonGonderim) : 'Bulut ile eşit';
   }
   function bulutDegisti() {
     if (!BULUT.durum || !BULUT.durum.aktif) return;
@@ -1987,14 +1979,22 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     location.reload();
   }
   async function bulutPenceresi() {
-    const m = document.getElementById('bulut-alan'); if (!m) return;
-    const btn = document.getElementById('bulut-ac-btn');
-    if (m.style.display !== 'none' && !bulutPenceresi.yenile) { m.style.display = 'none'; m.innerHTML = ''; if (btn) btn.textContent = '⚙️ Bulut ayarları ▾'; return; }
-    bulutPenceresi.yenile = false;
-    m.remove = () => { m.style.display = 'none'; m.innerHTML = ''; if (btn) btn.textContent = '⚙️ Bulut ayarları ▾'; };
-    m.style.display = 'block'; if (btn) btn.textContent = '✕ Kapat';
+    let ort = document.getElementById('bulut-modal'); if (ort) ort.remove();
+    ort = document.createElement('div'); ort.id = 'bulut-modal'; ort.className = 'no-print';
+    ort.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99990;display:flex;align-items:flex-start;justify-content:center;padding:30px 14px;overflow:auto';
+    ort.innerHTML = `<div style="background:#fff;border-radius:12px;width:100%;max-width:700px;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+      <div style="padding:11px 16px;background:#4b3f8c;color:#fff;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <b style="font-size:16px">☁️ Bulut eşitleme (Telegram)</b>
+        <span><button type="button" id="bl-rehber" style="padding:6px 12px;border:0;border-radius:6px;background:#fde68a;color:#4b3f8c;font-weight:700;cursor:pointer">📖 Nasıl kurulur? (resimli)</button>
+        <span id="bl-x" title="Kapat" style="cursor:pointer;font-size:20px;margin-left:12px;vertical-align:middle">✕</span></span></div>
+      <div id="bulut-alan"></div></div>`;
+    document.body.appendChild(ort);
+    const m = ort.querySelector('#bulut-alan');
+    m.remove = () => ort.remove();
+    ort.querySelector('#bl-x').onclick = () => ort.remove();
+    ort.querySelector('#bl-rehber').onclick = () => bulutRehber();
     const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const kutu = ic => `<div style="background:#fff;color:#1e293b;border-radius:8px;font:13.5px 'Segoe UI',sans-serif;max-width:760px">
+    const kutu = ic => `<div style="background:#fff;color:#1e293b;border-radius:0 0 12px 12px;font:13.5px 'Segoe UI',sans-serif">
       <div style="padding:14px 18px">${ic}</div></div>`;
     const alan = (id, etiket, tip, deger, ipucu) => `<label style="display:block;margin:7px 0 2px;font-weight:600">${etiket}</label><input id="${id}" type="${tip || 'text'}" value="${esc(deger || '')}" placeholder="${esc(ipucu || '')}" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid #94a3b8;border-radius:6px;font-size:13.5px">`;
     const dugme = (id, metin, renk) => `<button type="button" id="${id}" style="margin-top:10px;margin-right:6px;padding:8px 14px;border:0;border-radius:7px;background:${renk};color:#fff;font-weight:700;cursor:pointer">${metin}</button>`;
@@ -2043,8 +2043,9 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const sifreUygun = s => s.length >= 8 && /\d/.test(s) && /[^\d]/.test(s);
     const bagla = m.querySelector('#bk-bagla');
     if (bagla) bagla.onclick = async () => {
-      const token = m.querySelector('#bk-token').value.trim(), s1 = m.querySelector('#bk-sifre').value, s2 = m.querySelector('#bk-sifre2').value, cihaz = m.querySelector('#bk-cihaz').value.trim();
+      const token = bulutAnahtarTemizle(m.querySelector('#bk-token').value), s1 = m.querySelector('#bk-sifre').value, s2 = m.querySelector('#bk-sifre2').value, cihaz = m.querySelector('#bk-cihaz').value.trim();
       if (!token) return mesaj('Bot anahtarını yapıştırın.');
+      if (!/^\d{5,}:[\w-]{25,}$/.test(token) && !/^TPB-/.test(token)) return mesaj('Bu bir bot anahtarına benzemiyor. BotFather\'ın son mesajında "Use this token" yazısının altındaki satırın TAMAMINI (baştaki sayıdan sonuna kadar) kopyalayıp yapıştırın. Elle yazmayın.');
       if (!sifreUygun(s1)) return mesaj('Şifre en az 8 karakter olmalı, harf ve rakam içermeli.');
       if (s1 !== s2) return mesaj('Şifreler aynı değil.');
       meşgul(bagla, true); mesaj('⏳ Telegram\'a bağlanılıyor…');
@@ -2070,10 +2071,12 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       m.remove(); bulutPenceresi(); bulutBaslat();
     };
     m.querySelector('#bc-cek').onclick = async () => {
-      const ckod = m.querySelector('#bc-kod').value.replace(/\D/g, ''), sifre = m.querySelector('#bc-sifre').value, bag = m.querySelector('#bc-baglanti').value.trim(), cihaz = m.querySelector('#bc-cihaz').value.trim();
+      const ckod = m.querySelector('#bc-kod').value.replace(/\D/g, ''), sifre = m.querySelector('#bc-sifre').value, bag = bulutAnahtarTemizle(m.querySelector('#bc-baglanti').value), cihaz = m.querySelector('#bc-cihaz').value.trim();
       if (ckod.length < 5) return mesaj('Kurum kodunu yazın.');
       if (!sifre) return mesaj('Şifreyi yazın.');
       if (!bag) return mesaj('Bağlantı anahtarını yapıştırın.');
+      if (/^\d{5,}:/.test(bag)) return mesaj('Buraya yapıştırdığınız BOT ANAHTARI.\n\n• Bu okulu ilk kez buluta bağlıyorsanız yukarıdaki 1) bölümü kullanın.\n• Okul başka bilgisayarda zaten bağlıysa buraya o bilgisayarda gösterilen TPB-… ile başlayan bağlantı anahtarını yapıştırın (Telegram\'da Kayıtlı Mesajlar\'a kaydetmiştiniz).');
+      if (!/^TPB-/.test(bag)) return mesaj('Bağlantı anahtarı TPB- ile başlar. İlk bilgisayarda Bulut penceresinde gösterilen anahtarın tamamını kopyalayıp yapıştırın.');
       const b = m.querySelector('#bc-cek'); meşgul(b, true); mesaj('⏳ Buluttan çekiliyor…');
       const r = await window.masaustu.bulut({ op: 'cek', kurumKodu: ckod, baglanti: bag, sifre, cihaz });
       meşgul(b, false);
@@ -2082,6 +2085,173 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       m.remove(); bulutOkulaYerlestir(p);
     };
   }
+  // yapıştırılan anahtardaki boşluk, satır sonu, tırnak ve biçim işaretlerini at; metnin içinden anahtarı bul
+  function bulutAnahtarTemizle(t) {
+    t = String(t || '').replace(/[\s`'"​-‏⁠﻿]/g, '');
+    const tpb = t.match(/TPB-[A-Za-z0-9+/=]+/); if (tpb) return tpb[0];
+    const tok = t.match(/\d{5,}:[\w-]{25,}/); if (tok) return tok[0];
+    return t;
+  }
+  // ===== Resimli kurulum rehberi (yazdırılabilir) =====
+  function bulutRehber() {
+    let r = document.getElementById('bulut-rehber'); if (r) r.remove();
+    const kod = kurumKoduAl() || '123456';
+    r = document.createElement('div'); r.id = 'bulut-rehber';
+    const tg = (baslik, ic, gen) => `<div class="rb-tg" style="max-width:${gen || 420}px"><div class="rb-tgust">${baslik}</div><div class="rb-tgic">${ic}</div></div>`;
+    const gelen = t => `<div class="rb-bal rb-gelen">${t}</div>`, giden = t => `<div class="rb-bal rb-giden">${t}</div>`;
+    const dikkat = t => `<div class="rb-dikkat">⚠️ ${t}</div>`, ipucu = t => `<div class="rb-ipucu">💡 ${t}</div>`;
+    const adim = (no, baslik, ic) => `<section class="rb-adim"><h3><span class="rb-no">${no}</span>${baslik}</h3>${ic}</section>`;
+    const kutucuk = (ad, acik, isaret) => `<div class="rb-izin"><span class="rb-cb ${acik ? 'acik' : ''}">${acik ? '✓' : ''}</span>${ad}${isaret ? ` <b class="rb-ok">← ${isaret}</b>` : ''}</div>`;
+    r.innerHTML = `<style>
+      #bulut-rehber{position:fixed;inset:0;z-index:99995;background:#e2e8f0;overflow:auto;font:14px/1.5 'Segoe UI',sans-serif;color:#1e293b}
+      #bulut-rehber .rb-ust{position:sticky;top:0;background:#4b3f8c;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;z-index:2}
+      #bulut-rehber .rb-ust button{padding:7px 14px;border:0;border-radius:6px;font-weight:700;cursor:pointer;margin-left:6px}
+      #bulut-rehber .rb-sayfa{max-width:860px;margin:16px auto;background:#fff;border-radius:10px;padding:22px 28px}
+      #bulut-rehber h2{margin:0 0 4px;color:#4b3f8c} #bulut-rehber h3{margin:0 0 8px;color:#1e293b;font-size:17px;display:flex;align-items:center;gap:10px}
+      #bulut-rehber .rb-no{display:inline-flex;width:30px;height:30px;border-radius:50%;background:#4b3f8c;color:#fff;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+      #bulut-rehber .rb-adim{border-top:1px solid #e2e8f0;padding:16px 0;page-break-inside:avoid}
+      #bulut-rehber ol,#bulut-rehber ul{margin:4px 0 8px 20px;padding:0} #bulut-rehber li{margin:3px 0}
+      #bulut-rehber code{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:1px 6px;font-size:13px}
+      #bulut-rehber .rb-dikkat{background:#fef2f2;border-left:4px solid #dc2626;padding:7px 11px;margin:8px 0;border-radius:4px}
+      #bulut-rehber .rb-ipucu{background:#f0fdf4;border-left:4px solid #16a34a;padding:7px 11px;margin:8px 0;border-radius:4px}
+      #bulut-rehber .rb-ikili{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap} #bulut-rehber .rb-ikili>div:first-child{flex:1;min-width:260px}
+      #bulut-rehber .rb-tg{border:2px solid #94a3b8;border-radius:12px;overflow:hidden;background:#b7cfa1;flex:1;min-width:260px;font-size:13px}
+      #bulut-rehber .rb-tgust{background:#fff;padding:7px 12px;font-weight:700;border-bottom:1px solid #cbd5e1;display:flex;align-items:center;gap:8px}
+      #bulut-rehber .rb-tgic{padding:10px;display:flex;flex-direction:column;gap:6px}
+      #bulut-rehber .rb-bal{max-width:85%;padding:6px 10px;border-radius:12px;box-shadow:0 1px 1px rgba(0,0,0,.15)}
+      #bulut-rehber .rb-gelen{background:#fff;align-self:flex-start} #bulut-rehber .rb-giden{background:#e3fcc9;align-self:flex-end}
+      #bulut-rehber .rb-mavi{background:#3390ec;color:#fff;border-radius:10px;padding:7px;text-align:center;font-weight:700}
+      #bulut-rehber .rb-ara{background:#f1f5f9;border-radius:18px;padding:6px 12px;color:#64748b}
+      #bulut-rehber .rb-satir{background:#fff;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px}
+      #bulut-rehber .rb-avatar{width:30px;height:30px;border-radius:50%;background:#64748b;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+      #bulut-rehber .rb-tik{color:#3390ec} #bulut-rehber .rb-ok{color:#dc2626}
+      #bulut-rehber .rb-isaret{outline:3px solid #dc2626;outline-offset:2px;border-radius:8px}
+      #bulut-rehber .rb-izin{background:#fff;padding:5px 10px;border-radius:6px;display:flex;align-items:center;gap:8px}
+      #bulut-rehber .rb-cb{width:16px;height:16px;border:2px solid #94a3b8;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+      #bulut-rehber .rb-cb.acik{background:#3390ec;border-color:#3390ec}
+      #bulut-rehber .rb-fab{width:40px;height:40px;border-radius:50%;background:#3390ec;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:18px}
+      #bulut-rehber .rb-prog{border:2px solid #4b3f8c;border-radius:10px;overflow:hidden;flex:1;min-width:260px;font-size:13px}
+      #bulut-rehber .rb-prog .bas{background:#4b3f8c;color:#fff;padding:6px 10px;font-weight:700} #bulut-rehber .rb-prog .ic{padding:8px 12px}
+      #bulut-rehber .rb-prog .kutu{border:1px solid #94a3b8;border-radius:5px;padding:4px 8px;margin:2px 0 6px;color:#64748b;background:#fff}
+      #bulut-rehber table{border-collapse:collapse;width:100%;font-size:13px} #bulut-rehber td,#bulut-rehber th{border:1px solid #cbd5e1;padding:6px 8px;vertical-align:top;text-align:left} #bulut-rehber th{background:#f1f5f9}
+      @media print{ body.rb-yazdir > *:not(#bulut-rehber){display:none !important}
+        #bulut-rehber{position:static;background:#fff;overflow:visible} #bulut-rehber .rb-ust{display:none} #bulut-rehber .rb-sayfa{margin:0;padding:0;max-width:none;border-radius:0}
+        #bulut-rehber *{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+    </style>
+    <div class="rb-ust"><b style="font-size:16px">📖 Bulut eşitleme (Telegram) — resimli kurulum rehberi</b>
+      <span><button type="button" id="rb-yazdir" style="background:#fde68a;color:#4b3f8c">🖨️ Yazdır / PDF</button><button type="button" id="rb-kapat" style="background:#fff;color:#4b3f8c">✕ Kapat</button></span></div>
+    <div class="rb-sayfa">
+      <h2>☁️ Taşıma Programı — Bulut Eşitleme Kurulumu</h2>
+      <div style="color:#475569">Okulun taşıma verisini (güzergahlar, öğrenciler, puantaj) kendi Telegram kanalınız üzerinden okuldaki ve evdeki bilgisayarlarınız arasında <b>şifreli</b> olarak eşitler.
+        Kurulum <b>bir kez</b> yapılır (yaklaşık 10 dakika). Sonra her bilgisayarda yalnızca bir kez “veriyi çek” denir; gerisi kendiliğinden olur.</div>
+      ${dikkat('<b>KVKK:</b> Öğrenci verisi okul dışında (Telegram) şifreli olarak saklanacaktır. Kurmadan önce <b>okul müdürünün bilgisi ve onayı</b> alınmalıdır. Kanal ve bot yalnızca okulunuza ait olur; başka okullar göremez.')}
+      <div class="rb-ipucu">💡 <b>Gerekenler:</b> telefonda Telegram hesabı · bilgisayarda internet · okulun kurum kodu (programda Anasayfa → KURUM KODU) · sizin belirleyeceğiniz bir şifre.</div>
+
+      ${adim(1, 'Telegram\'a bilgisayardan girin', `<div class="rb-ikili"><div><ol>
+        <li>Tarayıcıda <code>web.telegram.org</code> adresini açın.</li>
+        <li>Ekranda QR kod çıkar. Telefonda <b>Telegram → Ayarlar → Cihazlar → Masaüstü cihaz bağla</b> deyip QR'ı okutun.</li>
+        <li>QR yerine telefon numarasıyla da girebilirsiniz; kod telefondaki Telegram'a gelir.</li></ol>
+        ${ipucu('Kurulumu bilgisayardan yapın: bot anahtarını kopyalayıp programa yapıştıracaksınız.')}</div>
+        ${tg('Telegram Web', `<div style="background:#fff;border-radius:8px;padding:14px;text-align:center"><div style="display:inline-grid;grid-template-columns:repeat(5,14px);gap:2px">${Array.from({ length: 25 }, (_, i) => `<span style="width:14px;height:14px;background:${[0,1,2,4,5,7,9,12,14,15,17,19,20,21,22,24].includes(i) ? '#1e293b' : '#fff'}"></span>`).join('')}</div><div style="margin-top:8px;font-weight:700">Telegram'a QR kod ile giriş</div><div style="color:#64748b;font-size:12px">Telefonda: Ayarlar › Cihazlar › Masaüstü cihaz bağla</div></div>`, 300)}</div>`)}
+
+      ${adim(2, 'BotFather\'ı bulun', `<div class="rb-ikili"><div><ol>
+        <li>Sol üstteki <b>🔍 Search</b> kutusuna <code>BotFather</code> yazın.</li>
+        <li>Adının yanında <b class="rb-tik">mavi tik ✔</b> olanı seçin.</li>
+        <li>Alttaki mavi <b>START</b> düğmesine basın.</li></ol>
+        ${dikkat('Mavi tiki olmayan “BotFather” benzeri hesaplar taklittir, onları açmayın.')}</div>
+        ${tg('🔍 Arama', `<div class="rb-ara">🔍 BotFather</div><div class="rb-satir rb-isaret"><span class="rb-avatar">BF</span><b>BotFather</b> <span class="rb-tik">✔</span></div><div class="rb-satir" style="opacity:.55"><span class="rb-avatar">B</span>BotFather_tr (taklit)</div><div class="rb-mavi rb-isaret" style="margin-top:6px">START</div>`)}</div>`)}
+
+      ${adim(3, 'Botu oluşturun', `<div class="rb-ikili"><div><ol>
+        <li>Mesaj kutusuna <code>/newbot</code> yazıp gönderin.</li>
+        <li>Ad sorar: okulun adını yazın, ör. <code>Fakılar Taşıma Bulut</code>.</li>
+        <li>Kullanıcı adı sorar: <code>F${kod}_bot</code> gibi yazın.</li>
+        <li>“<b>Done! Congratulations…</b>” mesajı gelir. İçinde “Use this token…” altındaki gri satır <b>bot anahtarıdır</b>.</li></ol>
+        ${dikkat('<b>Kullanıcı adında</b> Türkçe harf (ş, ı, ç, ğ, ü, ö) ve boşluk olmaz, <b>rakamla başlayamaz</b>, sonu <code>_bot</code> ile bitmelidir. “already taken” derse sonuna rakam ekleyin.')}
+        ${dikkat('Komutları bir yerden kopyalayınca “<b>Remove Formatting? … Telegram Premium</b>” penceresi çıkarsa <b>SUBSCRIBE TO PREMIUM\'a basmayın</b>; ✕ ile kapatın, yazıyı silip <b>elle</b> yazın.')}
+        ${dikkat('<b>Bot anahtarını kimseye göstermeyin</b>, ekran görüntüsüne almayın, mesajla göndermeyin. Görünürse BotFather\'a <code>/revoke</code> yazıp botu seçin; yeni anahtar verir, eskisi çalışmaz olur.')}</div>
+        ${tg('<span class="rb-avatar">BF</span> BotFather <span class="rb-tik">✔</span>', `${giden('/newbot')}${gelen('Alright, a new bot. How are we going to call it?')}${giden('Fakılar Taşıma Bulut')}${gelen('Good. Now let\'s choose a username for your bot. It must end in `bot`.')}${giden(`F${kod}_bot`)}${gelen(`Done! Congratulations on your new bot…<br><br>Use this token to access the HTTP API:<br><span class="rb-isaret" style="display:inline-block;background:#f1f5f9;font-family:monospace;padding:2px 5px;margin-top:3px">1234567890:AA••••••••••••••••</span><br><b class="rb-ok">↑ bot anahtarı (gizli)</b>`)}`)}</div>`)}
+
+      ${adim(4, 'Gizli kanal açın', `<div class="rb-ikili"><div><ol>
+        <li>Fareyi sol taraftaki sohbet listesinin üzerine getirin; <b>sağ alt köşede</b> mavi <b>kalem ✏️</b> düğmesi belirir, basın.</li>
+        <li><b>New Channel</b>'ı seçin.</li>
+        <li>Kanal adı yazın (ör. <code>Fakılar Taşıma Bulut</code>), açıklamayı boş bırakın, <b>→</b> ile ilerleyin.</li>
+        <li>Üye eklemeyin, yine <b>→</b>. “Public/Private” sorarsa <b>Private</b>.</li></ol>
+        ${ipucu('Bu kanalı kimseyle paylaşmayın; içindeki dosyalar şifrelidir, sadece programınız açar.')}</div>
+        ${tg('Sohbetler', `<div class="rb-ara">🔍 Search</div><div class="rb-satir"><span class="rb-avatar">BF</span>BotFather</div><div class="rb-satir"><span class="rb-avatar">AB</span>…</div>
+          <div style="display:flex;justify-content:flex-end;align-items:flex-end;gap:8px"><div style="background:#fff;border-radius:8px;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.2)"><div class="rb-isaret" style="padding:2px 6px">📢 <b>New Channel</b></div><div style="padding:2px 6px;color:#64748b">👥 New Group</div><div style="padding:2px 6px;color:#64748b">👤 New Private Chat</div></div><span class="rb-fab rb-isaret">✏️</span></div>`)}</div>`)}
+
+      ${adim(5, 'Botu kanala yönetici yapın', `<div class="rb-ikili"><div><ol>
+        <li>Kanalın üstündeki <b>adına</b> tıklayın → sağda bilgiler açılır.</li>
+        <li>Sağ üstteki <b>kalem ✏️ (Edit)</b> → <b>Administrators</b> → mavi <b>+</b> (Add Admin).</li>
+        <li>Arama kutusuna botun kullanıcı adını (<code>F${kod}_bot</code>) yazıp seçin.</li>
+        <li>İzinlerde <b>Post Messages</b> ve <b>Edit Messages of Others</b> açık kalsın; <b>Add New Admins</b>'in işaretini <b>kaldırın</b>.</li>
+        <li>Sağ alttaki mavi <b>✓</b> ile kaydedin.</li></ol></div>
+        ${tg('What can this admin do?', `${kutucuk('Change Channel Info', true)}${kutucuk('Post Messages', true, 'açık kalsın')}${kutucuk('Edit Messages of Others', true, 'açık kalsın')}${kutucuk('Delete Messages of Others', true)}${kutucuk('Add New Admins', false, 'işareti kaldırın')}<div style="text-align:right"><span class="rb-fab rb-isaret">✓</span></div>`)}</div>`)}
+
+      ${adim(6, 'Kanala bir deneme mesajı yazın', `<div class="rb-ikili"><div>
+        <p>Kanalın kendi ekranına dönün (sol üst <b>←</b>), alttaki kutuya <code>deneme</code> yazıp gönderin.</p>
+        ${dikkat('Bu mesaj, <b>bot yönetici yapıldıktan SONRA</b> yazılmalı ve programda bağlanma <b>24 saat içinde</b> yapılmalıdır; program kanalı bu mesajdan tanır.')}</div>
+        ${tg('📢 Fakılar Taşıma Bulut', `<div style="text-align:center"><span style="background:rgba(0,0,0,.25);color:#fff;border-radius:10px;padding:2px 10px;font-size:12px">Channel created</span></div>${giden('deneme')}`)}</div>`)}
+
+      ${adim(7, 'Programda bağlayın (ilk bilgisayar)', `<div class="rb-ikili"><div><ol>
+        <li>Programda okul açıkken <b>Anasayfa → ☁️ Bulut</b> düğmesine basın.</li>
+        <li><b>1) Bu bilgisayardaki okulu buluta bağla</b> bölümünü doldurun:
+          <ul><li><b>Bot anahtarı:</b> BotFather'daki anahtarın üzerine bir kez tıklayın (“Copied”), buraya <b>Ctrl+V</b>.</li>
+          <li><b>Şifre</b> ×2: sizin belirlediğiniz, en az 8 karakter, harf ve rakam. <b>Kağıda not edin.</b></li>
+          <li><b>Bu bilgisayarın adı:</b> ör. <code>Okul - Müdür odası</code>.</li></ul></li>
+        <li><b>☁️ Bağla</b>. “✅ Bağlandı ve okulun verisi gönderildi” çıkar.</li></ol>
+        ${dikkat('Alttaki <b>2) Veriyi çek</b> bölümü <b>diğer bilgisayarlar</b> içindir; ilk bilgisayarda kullanmayın.')}
+        ${dikkat('<b>Şifre unutulursa buluttaki veri açılamaz.</b> (Bilgisayardaki veri ve yedekler etkilenmez.)')}</div>
+        <div class="rb-prog"><div class="bas">☁️ Bulut eşitleme (Telegram)</div><div class="ic"><b style="color:#4b3f8c">1) Bu bilgisayardaki okulu buluta bağla</b><br>Kurum kodu: <b>${kod}</b>
+          <div>Bot anahtarı</div><div class="kutu rb-isaret">••••••••••••••••••••</div><div>Şifre</div><div class="kutu">••••••••</div><div>Şifre (tekrar)</div><div class="kutu">••••••••</div><div>Bu bilgisayarın adı</div><div class="kutu" style="color:#1e293b">Okul - Müdür odası</div>
+          <span style="display:inline-block;background:#4b3f8c;color:#fff;border-radius:6px;padding:5px 12px;font-weight:700" class="rb-isaret">☁️ Bağla</span>
+          <div style="margin-top:10px;opacity:.5"><b style="color:#b45309">2) Başka bilgisayardaki okul verisini çek</b> ← diğer bilgisayarlar için</div></div></div></div>`)}
+
+      ${adim(8, 'Bağlantı anahtarını saklayın', `<div class="rb-ikili"><div><ol>
+        <li>Bağlandıktan sonra Bulut penceresinde <b>TPB-</b> ile başlayan <b>bağlantı anahtarı</b> görünür; <b>📋 Kopyala</b>'ya basın.</li>
+        <li>Telegram'da sol üst <b>≡ → Saved Messages (Kayıtlı Mesajlar)</b>'a yapıştırıp gönderin.</li></ol>
+        ${ipucu('Diğer bilgisayarlarda bu anahtarı Telegram\'dan kopyalayıp yapıştıracaksınız; elle yazmanız gerekmez.')}
+        ${dikkat('Bağlantı anahtarını da kimseyle paylaşmayın.')}</div>
+        ${tg('🔖 Saved Messages', giden('<span style="font-family:monospace">TPB-LTEwMDQ••••••••••••••</span>'))}</div>`)}
+
+      ${adim(9, 'Diğer bilgisayarlarda (ev, diğer oda)', `<div class="rb-ikili"><div><ol>
+        <li>Programı açın (güncellemeyi alsın), <b>Anasayfa → ☁️ Bulut</b>.</li>
+        <li><b>2) Başka bilgisayardaki okul verisini çek</b>: kurum kodu, şifre, bağlantı anahtarı (TPB-…), bu bilgisayarın adı.</li>
+        <li><b>⬇️ Veriyi çek</b>.</li></ol>
+        ${ipucu('O bilgisayarda bu okul <b>varsa</b> önce yedeği alınır, sonra güncellenir. <b>Yoksa yeni okul</b> olarak eklenir; programdaki diğer okullara dokunulmaz.')}
+        ${ipucu('Bu işlem <b>her bilgisayarda yalnızca bir kez</b> yapılır.')}</div>
+        <div class="rb-prog"><div class="bas">☁️ Bulut eşitleme (Telegram)</div><div class="ic"><b style="color:#b45309">2) Başka bilgisayardaki okul verisini çek</b>
+          <div>Kurum kodu</div><div class="kutu" style="color:#1e293b">${kod}</div><div>Şifre</div><div class="kutu">••••••••</div><div>Bağlantı anahtarı</div><div class="kutu rb-isaret">TPB-••••••••••••</div><div>Bu bilgisayarın adı</div><div class="kutu" style="color:#1e293b">Ev bilgisayarı</div>
+          <span style="display:inline-block;background:#b45309;color:#fff;border-radius:6px;padding:5px 12px;font-weight:700" class="rb-isaret">⬇️ Veriyi çek</span></div></div></div>`)}
+
+      ${adim(10, 'Günlük kullanım — kendiliğinden olanlar', `<ul>
+        <li>Bir değişiklik yapınca yaklaşık <b>10 saniye</b> sonra kanala gönderilir. İnternet yoksa bekler, sonra gönderir.</li>
+        <li>Program açılırken başka bilgisayarda daha yeni değişiklik varsa <b>sorar</b>; yüklemeden önce bu bilgisayardakinin yedeğini alır.</li>
+        <li>Program açıkken <b>3 dakikada bir</b> bakar; yeni veri varsa Anasayfa'da sarı “☁️⬇ yeni veri — yükle” yazar.</li>
+        <li>İki bilgisayarda aynı anda değişiklik olursa sorar: <b>TAMAM</b> = buluttakini al, <b>İPTAL</b> = bu bilgisayardakini gönder.</li></ul>
+        <table><tr><th>Anasayfa'daki işaret</th><th>Anlamı</th></tr>
+          <tr><td><span style="background:#dcfce7;color:#166534;border-radius:10px;padding:1px 8px;font-weight:700">☁️✓ eşit (16:14)</span></td><td>Bu bilgisayar bulutla aynı.</td></tr>
+          <tr><td><span style="background:#e0f2fe;color:#075985;border-radius:10px;padding:1px 8px;font-weight:700">☁️⏳ gönderiliyor</span></td><td>Değişiklik birkaç saniye içinde gönderilecek.</td></tr>
+          <tr><td><span style="background:#fde68a;color:#7c2d12;border-radius:10px;padding:1px 8px;font-weight:700">☁️⬇ yeni veri — yükle</span></td><td>Başka bilgisayarda değişiklik var; tıklayınca yüklenir.</td></tr>
+          <tr><td><span style="background:#fee2e2;color:#991b1b;border-radius:10px;padding:1px 8px;font-weight:700">☁️✗ bağlantı yok</span></td><td>İnternet / Telegram'a ulaşılamıyor; bağlantı gelince kendisi dener.</td></tr>
+          <tr><td><span style="background:#e2e8f0;color:#475569;border-radius:10px;padding:1px 8px;font-weight:700">☁️ bulut kapalı · kur</span></td><td>Bu bilgisayarda bu okul için kurulmamış.</td></tr></table>`)}
+
+      ${adim('?', 'Sorun çözme', `<table><tr><th>Mesaj</th><th>Ne yapmalı</th></tr>
+        <tr><td>Bot anahtarı ya da bağlantı anahtarı geçersiz</td><td>Anahtarın <b>tamamını</b> kopyalayıp yapıştırın (elle yazmayın). İlk bilgisayarda 1) bölüm, diğerlerinde 2) bölüm kullanılır.</td></tr>
+        <tr><td>Telegram: Unauthorized</td><td>Anahtar yenilenmiş (/revoke) ya da yanlış. BotFather'daki <b>en son</b> anahtarı kullanın.</td></tr>
+        <tr><td>Bot henüz bir kanalda görünmüyor</td><td>Botu kanala <b>yönetici</b> yapın, sonra kanala <code>deneme</code> yazın ve tekrar deneyin.</td></tr>
+        <tr><td>ŞİFRE YANLIŞ — dosya açılamadı</td><td>İlk bilgisayarda belirlediğiniz şifreyi yazın (büyük/küçük harf önemli).</td></tr>
+        <tr><td>Bu kanaldaki veri başka bir okula ait</td><td>Kurum kodunu kontrol edin; her okulun kendi kanalı olmalı.</td></tr>
+        <tr><td>Telegram'a ulaşılamadı</td><td>İnternet bağlantısını ya da okul ağında Telegram'ın açık olup olmadığını kontrol edin.</td></tr>
+        <tr><td>Bot anahtarını yeniledim (/revoke)</td><td>Her bilgisayarda ☁️ Bulut → <b>Bu bilgisayarda kapat</b>, sonra ilk bilgisayarda 1) bölümle yeni anahtarla bağlanın (aynı şifre), yeni TPB anahtarını kaydedin, diğerlerinde 2) bölümle bağlanın.</td></tr></table>
+        ${ipucu('Bulut, bilgisayardaki <b>Yedekler</b>in yerine geçmez; ayda bir “⬇️ Yedek Dosyası İndir” ile yedek almaya devam edin.')}`)}
+    </div>`;
+    document.body.appendChild(r);
+    r.querySelector('#rb-kapat').onclick = () => r.remove();
+    r.querySelector('#rb-yazdir').onclick = () => { document.body.classList.add('rb-yazdir'); const bm = document.getElementById('bulut-modal'); if (bm) bm.style.display = 'none';
+      setTimeout(() => { window.print(); document.body.classList.remove('rb-yazdir'); if (bm) bm.style.display = 'flex'; }, 50); };
+  }
+  window.bulutRehber = bulutRehber;
   window.bulutPenceresi = bulutPenceresi; window.bulutYukle = bulutYukle;
 
   function okulSil() {
