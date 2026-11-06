@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.14';
+const KABUK_SURUM = '1.1.15';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -32,6 +32,14 @@ function klasorleriHazirla() {
   const oku = path.join(y.kaynak, 'OKU-BENI.txt');
   if (!fs.existsSync(oku)) try { fs.writeFileSync(oku, 'VERİ KAYNAĞI\r\n\r\nBu klasör normalde boş kalır.\r\nİçine okul bilgileri olan bir program dosyası (.html) ya da yedek dosyası (.json) koyarsanız,\r\n"Dosya → Veri kaynağından yükle" ya da "Verileri Sıfırla" dendiğinde okulun bilgileri bu dosyadan alınır.\r\nProgramın kendisi her zaman güncel sürüm olarak kalır.\r\nYüklemeden önce mevcut bilgiler Yedekler klasörüne kaydedilir.\r\n', 'utf8'); } catch (e) {}
   if (!fs.existsSync(y.progHtml)) fs.copyFileSync(path.join(__dirname, DENEME ? 'program_bos.html' : 'program.html'), y.progHtml);
+  // Deneme programı gerçek programın güncel sürümüyle açılır (ayrı klasör ve ayrı veri; gerçek verilere dokunmaz)
+  if (DENEME) try {
+    const gercek = path.join(app.getPath('documents'), 'Taşıma Programı', 'Program', 'program.html');
+    if (fs.existsSync(gercek)) {
+      const g = fs.readFileSync(gercek, 'utf8'), d = fs.readFileSync(y.progHtml, 'utf8');
+      if (programAnahtari(g) && surumSayi(programSurumu(g)) > surumSayi(programSurumu(d))) fs.writeFileSync(y.progHtml, g, 'utf8');
+    }
+  } catch (e) {}
 }
 function ayarOku() { try { return JSON.parse(fs.readFileSync(yollar().ayar, 'utf8')); } catch (e) { return {}; } }
 function ayarYaz(a) { try { fs.writeFileSync(yollar().ayar, JSON.stringify(a, null, 2), 'utf8'); } catch (e) {} }
@@ -103,7 +111,7 @@ function gunlukYedek() {
   } catch (e) {}
 }
 ipcMain.on('veri-oku', e => { e.returnValue = veriOku(); });
-const YEDEK_TURU = { sifirlama_oncesi: 'Sıfırlama öncesi', geri_yukleme_oncesi: 'Geri yükleme öncesi' };
+const YEDEK_TURU = { sifirlama_oncesi: 'Sıfırlama öncesi', geri_yukleme_oncesi: 'Geri yükleme öncesi', kaldirma_oncesi: 'Okul kaldırma öncesi' };
 ipcMain.on('veri-onceden-yedek', (e, etiket) => {
   try { const hedef = path.join(gunKlasoru(), yedekAdi(YEDEK_TURU[etiket] || dosyaUygun(etiket) || 'Yedek')); fs.copyFileSync(yollar().veri, hedef); e.returnValue = hedef; }
   catch (x) { e.returnValue = ''; }
@@ -629,21 +637,35 @@ async function pencereKapat(js, wcAna) {
   for (let t = 0; t < 10; t++) { await bekle(400); if (!(await js('__tsr.modalKok()').catch(() => false))) break;
     if (t === 5) { wcAna.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); wcAna.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); } }
 }
-async function guzergahAcOku(js, wcAna, g) { const m = await guzergahAc(js, wcAna, g); await pencereKapat(js, wcAna); return m; }
+async function guzergahAcOku(js, wcAna, g) { const m = await guzergahAc(js, wcAna, g); const t = Date.now(); await pencereKapat(js, wcAna); zamanKaydet(`  ${g.guzNo}: kapatma ${Date.now() - t} ms`); return m; }
+/* MEBBİS yavaşlığını anlamak için: her güzergah penceresinin açılma/okunma süreleri Belgeler\Taşıma Programı\mebbis_zaman.log'a yazılır (son 400 satır) */
+function zamanKaydet(satir) {
+  try {
+    const p = path.join(yollar().kok, 'mebbis_zaman.log');
+    let eski = ''; try { eski = fs.readFileSync(p, 'utf8'); } catch (e) {}
+    const L = eski ? eski.split('\n').slice(-399) : [];
+    const d = new Date(), z = n => String(n).padStart(2, '0');
+    L.push(`${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())} ${satir}`);
+    fs.writeFileSync(p, L.join('\n'), 'utf8');
+  } catch (e) {}
+}
 async function guzergahAc(js, wcAna, g) {
-  if (await js('__tsr.modalKok()')) await pencereKapat(js, wcAna);
+  const t0 = Date.now(); let tKapat = 0, bos = 0, eskiPencere = 0, deneme = 0;
+  if (await js('__tsr.modalKok()')) { await pencereKapat(js, wcAna); tKapat = Date.now() - t0; }
   await js(`document.documentElement.setAttribute('data-tasima-son', ${JSON.stringify(JSON.stringify({ maliyet: g.maliyet || '', no: g.guzNo || '', baslik: g.baslik || '', plaka: g.plaka || '', basT: g.basT || '', t: Date.now() }))})`).catch(() => {});
   let tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${g.i}"]'); if (!d) return false; d.click(); return true; })()`);
   if (!tik) { await js('__tsr.liste()'); tik = await js(`(() => { const d = document.querySelector('[data-tasima-duz="${g.i}"]'); if (!d) return false; d.click(); return true; })()`); }
+  const t1 = Date.now();
   let m = null, oncekiSay = -1;
   for (let t = 0; t < 60; t++) {           // en çok ~30 sn
-    await bekle(500);
+    await bekle(500); deneme++;
     let o = null; try { o = await js('__tsr.modalOku()'); } catch (x) {}
-    if (!o || !o.ogrenciler.length) continue;
-    if (o.plaka && __plk(o.plaka) !== __plk(g.plaka)) continue;   // önceki aracın penceresi
+    if (!o || !o.ogrenciler.length) { bos++; continue; }
+    if (o.plaka && __plk(o.plaka) !== __plk(g.plaka)) { eskiPencere++; continue; }   // önceki aracın penceresi
     if (o.ogrenciler.length === oncekiSay) { m = o; break; }
     oncekiSay = o.ogrenciler.length;
   }
+  zamanKaydet(`${g.guzNo} (${g.plaka}): önceki pencereyi kapatma ${tKapat} ms · açılıp okunma ${Date.now() - t1} ms · ${deneme} bakış (boş ${bos}, önceki araç ${eskiPencere}) · ${m ? m.ogrenciler.length + ' satır' : 'OKUNAMADI'}`);
   return m;
 }
 function guzergahBirlestir(g, m, uyarilar) {
@@ -792,7 +814,9 @@ async function servisTurGoster(ctx, mod) {
       return;
     }
     hedef().executeJavaScript(`(() => { const b = document.getElementById('__tasima_aktar'); if (b) { b.disabled = true; b.innerHTML = ${JSON.stringify('⏳<br>')} + ${JSON.stringify(String(ctx.pos + 1) + '/' + ctx.kuyruk.length + ' okunuyor')}; } })()`).catch(() => {});
+    const tB = Date.now();
     let bolge = null; if (g.maliyet) { try { bolge = await js(`__tsr.bolgeler(${JSON.stringify(g.maliyet)})`); } catch (x) { bolge = { hata: x.message }; } }
+    zamanKaydet(`${g.guzNo}: bölge bilgisi (ⓘ) ${Date.now() - tB} ms`);
     g.bolge = bolge;
     const m = await guzergahAcOku(js, ctx.ana, g);
     const uyarilar = [];
