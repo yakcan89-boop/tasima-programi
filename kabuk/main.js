@@ -6,7 +6,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, net, session } = requi
 const fs = require('fs');
 const path = require('path');
 
-const KABUK_SURUM = '1.1.17';
+const KABUK_SURUM = '1.1.18';
 const VARSAYILAN_GUNCELLEME_ADRESI = 'https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/surum.json';
 
 let anaPencere = null;
@@ -1091,6 +1091,20 @@ ipcMain.on('mebbis-siradaki', (e, o) => {
 
 ipcMain.on('mebbis-aktar', e => mebbisOgrenciAktar(e));
 /* prompt() masaüstünde çalışmaz: aynı işi gören küçük pencere. Sayfa cevap gelene kadar bekler. */
+// alert()/confirm() yerine: Windows'ta tarayıcının kendi uyarısından sonra yazı kutuları klavyeyi almayabiliyor.
+// Uyarıyı biz gösterip kapanınca pencereye odağı geri veriyoruz.
+ipcMain.on('uyari-sync', (e, tur, mesaj) => {
+  const w = BrowserWindow.fromWebContents(e.sender) || anaPencere;
+  const onay = tur === 'onay';
+  let r = 0;
+  try {
+    r = dialog.showMessageBoxSync(w, { type: onay ? 'question' : 'info', buttons: onay ? ['Tamam', 'İptal'] : ['Tamam'], defaultId: 0, cancelId: onay ? 1 : 0,
+      title: 'Taşıma Programı', message: String(mesaj == null ? '' : mesaj).slice(0, 6000), noLink: true });
+  } catch (x) {}
+  e.returnValue = onay ? r === 0 : true;
+  setTimeout(() => { try { if (w && !w.isDestroyed()) { w.focus(); w.webContents.focus(); } } catch (x) {} }, 30);
+});
+ipcMain.on('odak-ver', e => { const w = BrowserWindow.fromWebContents(e.sender) || anaPencere; try { if (w && !w.isDestroyed()) { w.blur(); w.focus(); w.webContents.focus(); } } catch (x) {} });
 ipcMain.on('istem', (e, mesaj, varsayilan) => {
   const ust = BrowserWindow.fromWebContents(e.sender) || anaPencere;
   const satir = String(mesaj || '').split('\n').length;

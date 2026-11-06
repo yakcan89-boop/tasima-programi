@@ -30,6 +30,9 @@ try { contextBridge.exposeInMainWorld('masaustu', { mebbisAc: () => ipcRenderer.
   dosyaSec: o => { try { return ipcRenderer.sendSync('dosya-sec', o); } catch (e) { return null; } },
   indirilenleriAc: () => ipcRenderer.send('indirilenleri-ac'),
   // prompt() yerine: küçük pencere açar, cevap gelene kadar bekler (Vazgeç = null)
+  // alert/confirm yerine (odak sorunu olmasın)
+  uyari: (tur, m) => { try { return ipcRenderer.sendSync('uyari-sync', tur === 'onay' ? 'onay' : 'bilgi', String(m == null ? '' : m)); } catch (e) { return tur === 'onay' ? false : true; } },
+  odakVer: () => ipcRenderer.send('odak-ver'),
   istem: (m, v) => { try { return ipcRenderer.sendSync('istem', String(m == null ? '' : m), v == null ? '' : String(v)); } catch (e) { return null; } },
   // yazdırma önizleme: sayfanın o anki hali PDF olarak gösterilir
   onizle: (html, baslik) => ipcRenderer.send('yazdir-onizle', html, baslik) }); } catch (e) {}
