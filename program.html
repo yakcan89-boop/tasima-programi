@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 14.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 15.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -387,6 +387,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           <div style="background:#e66c1b; padding:12px; border-radius:4px;">
             <table style="width:100%; border-collapse:collapse; background:#92d050; font-weight:bold;">
               <tr><td style="background:#fff; width:35%; padding:4px; border:1px solid #444;">GENEL MÜDÜRLÜK</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="genel-mudurluk" value="TEMEL EĞİTİM GENEL MÜDÜRLÜĞÜ" oninput="saveDataToStorage()"></td></tr>
+              <tr><td style="background:#fff; padding:4px; border:1px solid #444;" title="MEB kurum kodu — MEBBİS'ten veri çekilince kendiliğinden yazılır">KURUM KODU</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="kurum-kodu" value="" inputmode="numeric" placeholder="MEBBİS'ten veri çekince kendiliğinden yazılır" title="MEB kurum kodu. MEBBİS'ten öğrenci/güzergah çekilince sayfanın üstündeki '( 731480 )' kodundan kendiliğinden yazılır; elle de yazılabilir. Aynı kurum kodu iki okulda olamaz." onchange="kurumKoduElle(this.value)"></td></tr>
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;">MERKEZ OKUL ADI</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="okul-adi" value="" placeholder="OKUL ADINI YAZIN" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;">OKUL MÜDÜRÜ</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="okul-mudur" value="" placeholder="Ad SOYAD" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;">MDR. YRD.</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="mdr-yard" value="" placeholder="Ad SOYAD" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
@@ -1807,8 +1808,8 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     if (!Array.isArray(L)) L = [];
     if (!L.some(o => o.id === '')) L.unshift({ id: '', ad: '' });
     const bilgi = o => { try { const d = JSON.parse(localStorage.getItem(VERI_TABANI + (o.id ? '__' + o.id : '')) || 'null');
-      return { ad: (d && String(d.okulAdi || '').trim()) || o.ad || '', guz: d && Array.isArray(d.routes) ? d.routes.length : 0 }; } catch (e) { return { ad: o.ad || '', guz: 0 }; } };
-    return L.map(o => { const b = bilgi(o); return { id: o.id, ad: b.ad, guz: b.guz }; });
+      return { ad: (d && String(d.okulAdi || '').trim()) || o.ad || '', guz: d && Array.isArray(d.routes) ? d.routes.length : 0, kod: (d && String(d.kurumKodu || '').trim()) || '' }; } catch (e) { return { ad: o.ad || '', guz: 0, kod: '' }; } };
+    return L.map(o => { const b = bilgi(o); return { id: o.id, ad: b.ad, guz: b.guz, kurumKodu: b.kod }; });
   }
   function okulListesiYaz(L) { try { localStorage.setItem(OKUL_LISTE_ANAHTARI, JSON.stringify(L.map(o => ({ id: o.id, ad: o.ad })))); } catch (e) {} }
   function okulDegistir(id) {
@@ -1848,6 +1849,31 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     m.querySelector('#okul-ekle-tamam').onclick = tamam;
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') tamam(); if (e.key === 'Escape') kapat(); });
   }
+  /* KURUM KODU — okulun kimliği. MEBBİS'ten veri çekilirken sayfanın üstündeki "Sn. … ( 731480 )" satırından
+     kendiliğinden yazılır; elle de yazılabilir. Aynı kurum kodu programda iki okulda olamaz.
+     MEBBİS'teki okul ile programda açık okulun kodu farklıysa aktarım öncesi uyarılır (yanlış okula veri gitmesin). */
+  function kurumKoduAl() { return String(((document.getElementById('kurum-kodu') || {}).value) || '').replace(/\D/g, ''); }
+  function kurumKoduBaskaOkulda(kod) { return kod ? okulListesi().find(o => o.id !== AKTIF_OKUL && String(o.kurumKodu || '') === String(kod)) : null; }
+  function kurumKoduElle(deger) {
+    const el = document.getElementById('kurum-kodu'); const kod = String(deger || '').replace(/\D/g, '');
+    if (kod && (kod.length < 5 || kod.length > 8)) { alert('Kurum kodu 5–8 haneli bir sayı olmalı.'); el.value = ''; saveDataToStorage(); return; }
+    const b = kurumKoduBaskaOkulda(kod);
+    if (b) { alert(`Bu kurum kodu (${kod}) programda "${b.ad}" okulunda kayıtlı.\n\nAynı kurum kodu iki okulda olamaz.`); el.value = ''; saveDataToStorage(); return; }
+    el.value = kod; saveDataToStorage(); okulSeciciCiz();
+  }
+  function kurumKoduMebbis(k) {
+    if (!k || !k.kod) return true;
+    const kod = String(k.kod), mevcut = kurumKoduAl(), acikAd = (document.getElementById('okul-adi') || {}).value || '';
+    if (mevcut && mevcut !== kod) return confirm(`⚠️ OKUL UYUŞMUYOR!\n\nProgramda açık okul: ${acikAd} (kurum kodu ${mevcut})\nMEBBİS'te açık okul: ${k.ad || ''} (kurum kodu ${kod})\n\nYanlış okula veri aktarıyor olabilirsiniz. Önce programda doğru okulu seçin.\n\nYine de devam edilsin mi?`);
+    if (!mevcut) {
+      const b = kurumKoduBaskaOkulda(kod);
+      if (b) return confirm(`⚠️ MEBBİS'te açık okulun kurum kodu (${kod}) programda "${b.ad}" okulunda kayıtlı.\nProgramda şu an açık olan okul: "${acikAd}".\n\nProgramda doğru okulu seçtiğinizden emin olun. Yine de devam edilsin mi?\n(Kurum kodu bu okula yazılmaz.)`);
+      const el = document.getElementById('kurum-kodu'); if (el) el.value = kod;
+      saveDataToStorage(); try { okulSeciciCiz(); } catch (e) {}
+    }
+    return true;
+  }
+  window.kurumKoduMebbis = kurumKoduMebbis; window.kurumKoduElle = kurumKoduElle; window.kurumKoduAl = kurumKoduAl;
   function okulSil() {
     const L = okulListesi(); const o = L.find(x => x.id === AKTIF_OKUL);
     if (!AKTIF_OKUL || !o) { alert('İlk okul silinemez; bilgilerini "Verileri Sıfırla" ile boşaltabilirsiniz.'); return; }
@@ -1874,7 +1900,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     k.innerHTML = `<span style="font-size:18px;">🏫</span>
       <select id="okul-secici-liste" title="Okul değiştir / yeni okul ekle" style="max-width:440px; padding:6px 8px; border-radius:8px; border:2px solid #fde047; font-weight:bold; font-size:13px; background:#fff; color:#0f172a; cursor:pointer;" onchange="this.value === '__yeni__' ? okulEkle() : okulDegistir(this.value)">
         ${L.map(o => { const ikiz = o.ad && L.filter(x => x.ad === o.ad).length > 1;   // aynı adlı iki okul: güzergah sayısıyla ayırt edilsin
-          return `<option value="${esc(o.id)}" ${o.id === AKTIF_OKUL ? 'selected' : ''}>${esc(o.ad || '(okul adı yazılmamış)')}${ikiz ? ` — ${o.guz} güzergah` : ''}</option>`; }).join('')}
+          return `<option value="${esc(o.id)}" ${o.id === AKTIF_OKUL ? 'selected' : ''}>${esc(o.ad || '(okul adı yazılmamış)')}${ikiz ? ` — ${o.kurumKodu ? 'kod ' + o.kurumKodu + ', ' : ''}${o.guz} güzergah` : ''}</option>`; }).join('')}
         <option value="__yeni__">➕ Yeni okul ekle…</option>
       </select>
       ${L.length > 1 && AKTIF_OKUL ? '<button type="button" onclick="okulSil()" title="Bu okulu programdan kaldır (önce bütün okulların yedeği alınır)" style="background:#7f1d1d; color:#fff; border:1px solid #fecaca; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">🗑 Okulu kaldır</button>' : ''}`;
@@ -2172,6 +2198,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       _hazirlayan: 'Taşımalı Eğitim ve Nöbet Yönetim Sistemi – Tasarım ve geliştirme: Yunus AKÇAKAYA – Ücretsizdir.',
       routes, students, graduatedStudents, candidateStudents, driverPool, showStudentTc, teacherDuty,
       okulAdi: document.getElementById('okul-adi').value,
+      kurumKodu: (document.getElementById('kurum-kodu') || {}).value || '',
       okulMudur: document.getElementById('okul-mudur').value,
       mdrYard: document.getElementById('mdr-yard').value,
       genelMudurluk: document.getElementById('genel-mudurluk').value,
@@ -2237,6 +2264,8 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         if (!data || !Array.isArray(data.routes)) throw new Error('Geçersiz yedek');
         const B = s => String(s || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ' ').trim();
         const acik = (document.getElementById('okul-adi') || {}).value || '';
+        const acikKod = (document.getElementById('kurum-kodu') || {}).value || '';
+        if (data.kurumKodu && acikKod && String(data.kurumKodu) !== String(acikKod) && !confirm(`⚠️ Bu yedek başka bir okula ait!\n\nYedekteki kurum kodu: ${data.kurumKodu} (${data.okulAdi || ''})\nŞu an açık okulun kurum kodu: ${acikKod} (${acik})\n\nYedek AÇIK OLAN OKULUN yerine yüklenirse bu okulun bilgileri silinir. Başka okulun yedeğiyse önce "+ Okul ekle" ile yeni okul açıp oraya yükleyin.\n\nYine de devam edilsin mi?`)) return;
         if (data.okulAdi && acik && B(data.okulAdi) !== B(acik) && !confirm('Bu yedek "' + data.okulAdi + '" okuluna ait.\nŞu an açık olan okul: "' + acik + '".\n\nYedek AÇIK OLAN OKULUN yerine yüklenecek. Doğru okulu açtığınızdan emin misiniz?\n(Başka okulun yedeğiyse Vazgeç deyin, soldaki okul kutusundan o okula geçip tekrar yükleyin.)')) { document.getElementById('backup-file-input').value = ''; return; }
         localStorage.setItem(VERI_ANAHTARI, JSON.stringify(data));
         alert("Yedek başarıyla yüklendi. Sayfa yenileniyor...");
@@ -2255,6 +2284,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     const appData = {
       routes, students, graduatedStudents, candidateStudents, driverPool, showStudentTc,
       okulAdi: document.getElementById('okul-adi').value,
+      kurumKodu: (document.getElementById('kurum-kodu') || {}).value || '',
       okulMudur: document.getElementById('okul-mudur').value,
       mdrYard: document.getElementById('mdr-yard').value,
       genelMudurluk: document.getElementById('genel-mudurluk').value,
@@ -2501,6 +2531,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
         driverPool = (data.driverPool && data.driverPool.length) ? data.driverPool : JSON.parse(JSON.stringify(defaultDriverPool));
         showStudentTc = !!data.showStudentTc;
         if (data.okulAdi) document.getElementById('okul-adi').value = data.okulAdi;
+        { const kk = document.getElementById('kurum-kodu'); if (kk) kk.value = data.kurumKodu || ''; }
         if (data.okulMudur) document.getElementById('okul-mudur').value = data.okulMudur;
         if (data.mdrYard) document.getElementById('mdr-yard').value = data.mdrYard;
         if (data.genelMudurluk) document.getElementById('genel-mudurluk').value = data.genelMudurluk;
