@@ -2,22 +2,22 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "17.11.2026",
+      "surum": "18.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Bulut düğmesi yedekleme şeridine taşındı; ayarlar sayfayı itmeden pencerede açılır. '📖 Nasıl kurulur? (resimli)' rehberi eklendi (yazdırılabilir). Yapıştırılan anahtarlar kendiliğinden temizlenir; yanlış bölüme yazılan anahtar için uyarı."
+      "notlar": "Uyarı/soru pencerelerinden sonra (ör. Öğrenci Ara) yazı kutularına yazılamama sorunu giderildi."
     }
   },
   "kabuk": {
-    "surum": "1.1.17",
-    "notlar": "Bulut eşitleme (Telegram): okulun verisi kendi Telegram kanalınıza şifreli gider; diğer bilgisayarlar açılışta en yenisini alır.",
+    "surum": "1.1.18",
+    "notlar": "Uyarı/soru pencerelerinden sonra yazı kutularına yazılamama sorunu giderildi.",
     "dosyalar": {
       "main.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/main.js",
-        "sha256": "6545d3dd375c680dbab631b22151567b650ed4b7b5e99f80d13368d96e3727b7"
+        "sha256": "f0edaf4ede266193413745ff37fa4cbab26149ebd53fb22819e238c00ce79e2a"
       },
       "preload.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload.js",
-        "sha256": "b9df8b97e7cea027afb19c3528ee4b26d237c7cd63051be8192374c4aea6f4b5"
+        "sha256": "126d4a73ce5dabf58bc167dc2d897c698c3cdd6196f369d8619f3c501241c24e"
       },
       "preload_mebbis.js": {
         "adres": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/kabuk/preload_mebbis.js",
