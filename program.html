@@ -296,7 +296,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 15.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 16.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -334,6 +334,14 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
           <button onclick="document.getElementById('backup-file-input').click()" class="btn-nav btn-blue" style="width:auto; padding:9px 16px;">⬆️ Yedekten Geri Yükle</button>
           <input type="file" id="backup-file-input" accept=".json" style="display:none;" onchange="importBackup(this.files[0])">
         </div>
+      </div>
+      <div id="bulut-bar" class="no-print" style="background:#4b3f8c; border-radius:6px; padding:12px 15px; margin-bottom:15px; color:#fff;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div><b>☁️ BULUT EŞİTLEME (TELEGRAM):</b> <span id="bulut-isaret" style="font-size:12px;">—</span>
+            <div style="font-size:11px; opacity:0.85; margin-top:3px;">Okulun verisi kendi Telegram kanalınıza şifreli gönderilir; diğer bilgisayarlarınız açılışta en yenisini alır.</div></div>
+          <button onclick="bulutPenceresi()" id="bulut-ac-btn" class="btn-nav btn-purple" style="width:auto; padding:9px 16px; background:#fff; color:#4b3f8c;">⚙️ Bulut ayarları ▾</button>
+        </div>
+        <div id="bulut-alan" style="display:none; margin-top:10px;"></div>
       </div>
 
       <div class="dash-grid">
@@ -1874,6 +1882,208 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
     return true;
   }
   window.kurumKoduMebbis = kurumKoduMebbis; window.kurumKoduElle = kurumKoduElle; window.kurumKoduAl = kurumKoduAl;
+  /* ===================== BULUT EŞİTLEME (TELEGRAM) =====================
+     Okulun verisi kendi Telegram botunuzla kendi gizli kanalınıza, sizin şifrenizle şifreli gönderilir.
+     • Açılışta: buluttaki daha yeniyse (başka bilgisayardan) sorulur, yüklenir (önce yedek).
+     • Değişiklikten ~10 sn sonra gönderilir; internet yoksa bekler, sonra gönderilir.
+     • Açıkken 3 dk'da bir bakılır; başka bilgisayarda değişiklik varsa üst çubukta "yükle" çıkar.
+     • Başka bilgisayarda: kurum kodu + şifre + bağlantı anahtarı → aynı kurum kodlu okul varsa o güncellenir, yoksa yeni okul eklenir.
+     Ayarlar ve gizli anahtarlar masaüstü programında (bulut.json); şifrenin kendisi saklanmaz. */
+  const BULUT = { durum: null, zamanlayici: null, kontrolZ: null, hata: '', uzakYeni: null };
+  const bulutVar = () => !!(window.masaustu && window.masaustu.bulut);
+  const bulutBekleyenAnahtar = k => 'tasima_bulut_bekleyen__' + k, bulutSonAnahtar = k => 'tasima_bulut_son__' + k;
+  function bulutOzet(t) { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return t.length + ':' + (h >>> 0).toString(36); }
+  const bulutTarih = iso => { try { const d = new Date(iso); return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso || ''; } };
+  function bulutIsaret() {
+    const i = document.getElementById('bulut-isaret'); if (!i) return;
+    if (!bulutVar()) { i.textContent = 'yalnız masaüstü programında çalışır'; return; }
+    const d = BULUT.durum; const kod = kurumKoduAl();
+    i.style.cssText = 'margin-left:8px; padding:3px 9px; border-radius:12px; font-size:11.5px; font-weight:bold; cursor:pointer; white-space:nowrap;';
+    i.onclick = () => bulutPenceresi();
+    if (!d || !d.aktif) { i.style.background = '#e2e8f0'; i.style.color = '#475569'; i.textContent = '☁️ bulut kapalı'; i.title = 'Bulut eşitleme bu okul için kapalı'; return; }
+    if (BULUT.uzakYeni) { i.style.background = '#fde68a'; i.style.color = '#7c2d12'; i.textContent = `☁️⬇ yeni veri: ${BULUT.uzakYeni.cihaz} ${bulutTarih(BULUT.uzakYeni.tarih)} — yükle`; i.title = 'Başka bilgisayarda değişiklik yapıldı'; i.onclick = () => bulutYukle(true); return; }
+    const bek = (() => { try { return localStorage.getItem(bulutBekleyenAnahtar(kod)) === '1'; } catch (e) { return false; } })();
+    if (BULUT.hata) { i.style.background = '#fee2e2'; i.style.color = '#991b1b'; i.textContent = '☁️✗ ' + (bek ? 'gönderilemedi, bekliyor' : 'bağlantı yok'); i.title = BULUT.hata; return; }
+    if (bek) { i.style.background = '#e0f2fe'; i.style.color = '#075985'; i.textContent = '☁️⏳ gönderiliyor'; i.title = 'Değişiklikler birkaç saniye içinde gönderilecek'; return; }
+    i.style.background = '#dcfce7'; i.style.color = '#166534'; i.textContent = '☁️✓ eşit'; i.title = d.sonGonderim ? 'Son gönderim: ' + bulutTarih(d.sonGonderim) : 'Bulut ile eşit';
+  }
+  function bulutDegisti() {
+    if (!BULUT.durum || !BULUT.durum.aktif) return;
+    const kod = kurumKoduAl(); if (!kod) return;
+    const t = localStorage.getItem(VERI_ANAHTARI) || '';
+    if (localStorage.getItem(bulutSonAnahtar(kod)) === bulutOzet(t)) return;      // içerik değişmediyse gönderme
+    localStorage.setItem(bulutBekleyenAnahtar(kod), '1');
+    clearTimeout(BULUT.zamanlayici); BULUT.zamanlayici = setTimeout(bulutGonder, 10000);
+    bulutIsaret();
+  }
+  async function bulutGonder() {
+    const kod = kurumKoduAl(); if (!kod || !BULUT.durum || !BULUT.durum.aktif) return false;
+    if (BULUT.uzakYeni) { bulutIsaret(); return false; }                              // önce başka bilgisayardaki yeni veri çözülmeli
+    const t = localStorage.getItem(VERI_ANAHTARI) || '';
+    const r = await window.masaustu.bulut({ op: 'gonder', kurumKodu: kod, veri: t, okulAdi: (document.getElementById('okul-adi') || {}).value || '' });
+    if (r && r.ok) {
+      BULUT.hata = ''; localStorage.setItem(bulutSonAnahtar(kod), bulutOzet(t)); localStorage.removeItem(bulutBekleyenAnahtar(kod));
+      BULUT.durum.sonGonderim = r.tarih; bulutIsaret(); return true;
+    }
+    BULUT.hata = (r && r.hata) || 'Gönderilemedi'; bulutIsaret();
+    clearTimeout(BULUT.zamanlayici); BULUT.zamanlayici = setTimeout(bulutGonder, 120000);   // 2 dk sonra yeniden dene
+    return false;
+  }
+  function bulutPaketiAc(metin) { const p = JSON.parse(metin); if (!p || typeof p.veri !== 'string') throw new Error('Bulut dosyası okunamadı.'); JSON.parse(p.veri); return p; }
+  async function bulutYukle(sor) {
+    const kod = kurumKoduAl(); const u = BULUT.uzakYeni;
+    if (sor && !confirm(`☁️ Başka bilgisayarda değişiklik yapılmış:\n${u ? u.cihaz + ' — ' + bulutTarih(u.tarih) : ''}\n\nBuluttaki veri yüklensin mi? (Bu bilgisayardaki hâl önce yedeklenir.)`)) return;
+    const r = await window.masaustu.bulut({ op: 'indir', kurumKodu: kod });
+    if (!r || !r.ok) { alert('Buluttan yüklenemedi:\n\n' + ((r && r.hata) || '')); return; }
+    let p; try { p = bulutPaketiAc(r.veri); } catch (e) { alert(e.message); return; }
+    if (String(p.kurumKodu) !== String(kod)) { alert(`Buluttaki veri başka bir okula ait (kurum kodu ${p.kurumKodu}). Yüklenmedi.`); return; }
+    if (window.masaustu.oncedenYedek) { try { window.masaustu.oncedenYedek('Buluttan yükleme öncesi'); } catch (e) {} }
+    localStorage.setItem(VERI_ANAHTARI, p.veri);
+    localStorage.setItem(bulutSonAnahtar(kod), bulutOzet(p.veri)); localStorage.removeItem(bulutBekleyenAnahtar(kod));
+    if (window.__masaustuKaydet) { try { window.__masaustuKaydet(); } catch (e) {} }
+    location.reload();
+  }
+  async function bulutKontrol() {
+    const kod = kurumKoduAl(); if (!kod || !BULUT.durum || !BULUT.durum.aktif) return;
+    const r = await window.masaustu.bulut({ op: 'kontrol', kurumKodu: kod });
+    if (!r || !r.ok) { BULUT.hata = (r && r.hata) || ''; bulutIsaret(); return; }
+    BULUT.hata = ''; BULUT.uzakYeni = r.yeni ? r.uzak : null; bulutIsaret();
+    return r;
+  }
+  async function bulutBaslat() {
+    if (!bulutVar()) return;
+    const kod = kurumKoduAl();
+    BULUT.durum = kod ? await window.masaustu.bulut({ op: 'durum', kurumKodu: kod }) : { aktif: false };
+    bulutIsaret();
+    if (!BULUT.durum || !BULUT.durum.aktif) return;
+    const r = await bulutKontrol();
+    const bek = localStorage.getItem(bulutBekleyenAnahtar(kod)) === '1';
+    if (r && r.yeni) {
+      if (bek) {
+        if (confirm(`⚠️ İki bilgisayarda farklı değişiklik var.\n\n• Bulutta: ${r.uzak.cihaz} — ${bulutTarih(r.uzak.tarih)}\n• Bu bilgisayarda gönderilmemiş değişiklikler var.\n\nTAMAM = buluttakini yükle (bu bilgisayardaki hâl yedeklenir)\nİPTAL = bu bilgisayardakini gönder (buluttaki eski hâl kanalın geçmişinde kalır)`)) return bulutYukle(false);
+        BULUT.uzakYeni = null; await bulutGonder();
+      } else if (confirm(`☁️ Başka bilgisayarda daha yeni değişiklik var:\n${r.uzak.cihaz} — ${bulutTarih(r.uzak.tarih)}\n\nYüklensin mi? (Bu bilgisayardaki hâl önce yedeklenir.)`)) return bulutYukle(false);
+    } else if (bek) await bulutGonder();
+    else bulutDegisti();
+    clearInterval(BULUT.kontrolZ); BULUT.kontrolZ = setInterval(() => { if (!document.hidden) bulutKontrol(); }, 180000);
+  }
+  window.addEventListener('load', () => setTimeout(() => { bulutBaslat().catch(() => {}); }, 2500));
+  // Başka bilgisayardan gelen okul verisini yerleştir: aynı kurum kodlu okul varsa onu güncelle, yoksa yeni okul ekle
+  function bulutOkulaYerlestir(p) {
+    const L = okulListesi(); const kod = String(p.kurumKodu);
+    let hedef = L.find(o => String(o.kurumKodu || '') === kod);
+    let yeniOkul = false;
+    if (!hedef) {
+      const su = L.find(o => o.id === AKTIF_OKUL);
+      const bosMu = su && !su.ad && !su.guz;
+      if (bosMu) hedef = su;
+      else { const id = 'o' + Date.now().toString(36); const L2 = L.map(o => ({ id: o.id, ad: o.ad })); L2.push({ id, ad: p.okulAdi || ('Okul ' + kod) }); okulListesiYaz(L2); hedef = { id }; yeniOkul = true; }
+    } else if (window.masaustu.oncedenYedek) { try { window.masaustu.oncedenYedek('Buluttan yükleme öncesi'); } catch (e) {} }
+    localStorage.setItem(VERI_TABANI + (hedef.id ? '__' + hedef.id : ''), p.veri);
+    localStorage.setItem(bulutSonAnahtar(kod), bulutOzet(p.veri)); localStorage.removeItem(bulutBekleyenAnahtar(kod));
+    try { if (hedef.id) localStorage.setItem(AKTIF_OKUL_ANAHTARI, hedef.id); else localStorage.removeItem(AKTIF_OKUL_ANAHTARI); } catch (e) {}
+    if (window.__masaustuKaydet) { try { window.__masaustuKaydet(); } catch (e) {} }
+    alert(`✅ "${p.okulAdi || kod}" verisi ${yeniOkul ? 'YENİ OKUL olarak eklendi' : 'yüklendi'}.\n\nBuluttaki son değişiklik: ${p.cihaz || ''} — ${bulutTarih(p.tarih)}\n\nBundan sonra bu bilgisayarda bu okul için eşitleme açık.`);
+    location.reload();
+  }
+  async function bulutPenceresi() {
+    const m = document.getElementById('bulut-alan'); if (!m) return;
+    const btn = document.getElementById('bulut-ac-btn');
+    if (m.style.display !== 'none' && !bulutPenceresi.yenile) { m.style.display = 'none'; m.innerHTML = ''; if (btn) btn.textContent = '⚙️ Bulut ayarları ▾'; return; }
+    bulutPenceresi.yenile = false;
+    m.remove = () => { m.style.display = 'none'; m.innerHTML = ''; if (btn) btn.textContent = '⚙️ Bulut ayarları ▾'; };
+    m.style.display = 'block'; if (btn) btn.textContent = '✕ Kapat';
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const kutu = ic => `<div style="background:#fff;color:#1e293b;border-radius:8px;font:13.5px 'Segoe UI',sans-serif;max-width:760px">
+      <div style="padding:14px 18px">${ic}</div></div>`;
+    const alan = (id, etiket, tip, deger, ipucu) => `<label style="display:block;margin:7px 0 2px;font-weight:600">${etiket}</label><input id="${id}" type="${tip || 'text'}" value="${esc(deger || '')}" placeholder="${esc(ipucu || '')}" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid #94a3b8;border-radius:6px;font-size:13.5px">`;
+    const dugme = (id, metin, renk) => `<button type="button" id="${id}" style="margin-top:10px;margin-right:6px;padding:8px 14px;border:0;border-radius:7px;background:${renk};color:#fff;font-weight:700;cursor:pointer">${metin}</button>`;
+    if (!bulutVar()) { m.innerHTML = kutu('Bulut eşitleme yalnız masaüstü programında çalışır.'); return; }
+    const kod = kurumKoduAl();
+    const d = kod ? await window.masaustu.bulut({ op: 'durum', kurumKodu: kod, baglantiGoster: true }) : { aktif: false };
+    BULUT.durum = d;
+    if (d && d.aktif) {
+      m.innerHTML = kutu(`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px">
+          <b>Bu okul (kurum kodu ${esc(kod)}) bulutta.</b><br>Kanal: ${esc(d.kanalAd || '—')} · Bu bilgisayar: <b>${esc(d.cihaz)}</b><br>
+          Bu bilgisayardan son gönderim: ${esc(d.sonGonderim ? bulutTarih(d.sonGonderim) : '—')}<br>
+          Bulutta en son: ${esc(d.bilinen ? d.bilinen.cihaz + ' — ' + bulutTarih(d.bilinen.tarih) : '—')}</div>
+        ${dugme('bl-gonder', '⬆️ Şimdi gönder', '#0e7490')}${dugme('bl-yukle', '⬇️ Buluttan yükle', '#b45309')}${dugme('bl-kapat', 'Bu bilgisayarda kapat', '#94a3b8')}
+        <div style="margin-top:14px;padding:10px;background:#f8fafc;border:1px dashed #94a3b8;border-radius:8px">
+          <b>Başka bilgisayarınızda bağlanmak için</b> şu üçü gerekir: kurum kodu (<b>${esc(kod)}</b>), şifreniz ve aşağıdaki <b>bağlantı anahtarı</b>.
+          Bağlantı anahtarını kendi Telegram'ınızda "Kayıtlı Mesajlar"a kopyalayın; kimseyle paylaşmayın.
+          <textarea id="bl-baglanti" readonly style="width:100%;box-sizing:border-box;margin-top:6px;height:54px;font:11px monospace">${esc(d.baglanti || '')}</textarea>
+          ${dugme('bl-kopyala', '📋 Kopyala', '#475569')}</div>`);
+     
+      m.querySelector('#bl-gonder').onclick = async () => { const ok = await bulutGonder(); alert(ok ? 'Gönderildi.' : 'Gönderilemedi:\n\n' + BULUT.hata); m.remove(); };
+      m.querySelector('#bl-yukle').onclick = async () => { const r = await bulutKontrol(); BULUT.uzakYeni = r && r.uzak; m.remove(); bulutYukle(true); };
+      m.querySelector('#bl-kapat').onclick = async () => { if (!confirm('Bu bilgisayarda bu okul için bulut eşitleme kapatılsın mı?\n\nBuluttaki veri silinmez; diğer bilgisayarlar etkilenmez.')) return; await window.masaustu.bulut({ op: 'kapat', kurumKodu: kod }); BULUT.durum = { aktif: false }; clearInterval(BULUT.kontrolZ); bulutIsaret(); m.remove(); };
+      m.querySelector('#bl-kopyala').onclick = () => { const t = m.querySelector('#bl-baglanti'); t.select(); try { document.execCommand('copy'); } catch (e) {} };
+      return;
+    }
+    m.innerHTML = kutu(`
+      <div style="font-weight:700;color:#4b3f8c;font-size:14.5px">1) Bu bilgisayardaki okulu buluta bağla</div>
+      <div style="color:#475569;font-size:12.5px">İlk bilgisayarda yapılır. Gerekenler: BotFather'ın verdiği <b>bot anahtarı</b>, botun yönetici olduğu <b>gizli kanal</b> (kanala bir mesaj yazılmış olmalı) ve sizin belirlediğiniz <b>şifre</b>.</div>
+      ${kod ? `<div style="margin-top:6px">Okul: <b>${esc((document.getElementById('okul-adi') || {}).value || '')}</b> · Kurum kodu: <b>${esc(kod)}</b></div>
+        ${alan('bk-token', 'Bot anahtarı (ya da bağlantı anahtarı)', 'password', '', '123456789:AA…  ya da  TPB-…')}
+        ${alan('bk-sifre', 'Şifre (en az 8 karakter, harf ve rakam)', 'password')}${alan('bk-sifre2', 'Şifre (tekrar)', 'password')}
+        ${alan('bk-cihaz', 'Bu bilgisayarın adı', 'text', d.cihaz || '', 'Örn. Müdür yardımcısı odası')}
+        ${dugme('bk-bagla', '☁️ Bağla', '#4b3f8c')}`
+        : `<div style="margin-top:6px;color:#b91c1c;font-weight:700">Önce bu okulun kurum kodu gerekli: Anasayfa'daki KURUM KODU satırına yazın ya da MEBBİS'ten bir kez öğrenci/güzergah çekin.</div>`}
+      <hr style="margin:16px 0;border:0;border-top:1px solid #e2e8f0">
+      <div style="font-weight:700;color:#4b3f8c;font-size:14.5px">2) Başka bilgisayardaki okul verisini bu bilgisayara çek</div>
+      <div style="color:#475569;font-size:12.5px">Bu bilgisayarda bu kurum kodlu okul varsa o güncellenir (önce yedek alınır); yoksa <b>yeni okul</b> olarak eklenir — programdaki diğer okullara dokunulmaz.</div>
+      ${alan('bc-kod', 'Kurum kodu', 'text', '', 'Örn. 731480')}${alan('bc-sifre', 'Şifre', 'password')}
+      ${alan('bc-baglanti', 'Bağlantı anahtarı (ilk bilgisayarda gösterilen TPB-…)', 'password', '', 'TPB-…')}
+      ${alan('bc-cihaz', 'Bu bilgisayarın adı', 'text', d.cihaz || '', 'Örn. Ev bilgisayarı')}
+      ${dugme('bc-cek', '⬇️ Veriyi çek', '#b45309')}
+      <div id="bl-mesaj" style="margin-top:10px;white-space:pre-wrap;color:#b91c1c;font-weight:600"></div>`);
+   
+    const mesaj = t => { m.querySelector('#bl-mesaj').textContent = t || ''; };
+    const meşgul = (b, acik) => { b.disabled = acik; b.style.opacity = acik ? .6 : 1; };
+    const sifreUygun = s => s.length >= 8 && /\d/.test(s) && /[^\d]/.test(s);
+    const bagla = m.querySelector('#bk-bagla');
+    if (bagla) bagla.onclick = async () => {
+      const token = m.querySelector('#bk-token').value.trim(), s1 = m.querySelector('#bk-sifre').value, s2 = m.querySelector('#bk-sifre2').value, cihaz = m.querySelector('#bk-cihaz').value.trim();
+      if (!token) return mesaj('Bot anahtarını yapıştırın.');
+      if (!sifreUygun(s1)) return mesaj('Şifre en az 8 karakter olmalı, harf ve rakam içermeli.');
+      if (s1 !== s2) return mesaj('Şifreler aynı değil.');
+      meşgul(bagla, true); mesaj('⏳ Telegram\'a bağlanılıyor…');
+      let r = await window.masaustu.bulut({ op: 'kur', kurumKodu: kod, baglanti: token, sifre: s1, cihaz });
+      if (r && r.kanalSec) {
+        meşgul(bagla, false);
+        const kutuK = m.querySelector('#bl-mesaj'); kutuK.style.color = '#1e293b';
+        kutuK.innerHTML = '<b>Bot birden çok kanalda. Verinin tutulacağı kanalı seçin:</b><br>' + r.kanalSec.map((k, i) => `<button type="button" data-i="${i}" style="margin:6px 6px 0 0;padding:7px 12px;border:1px solid #4b3f8c;border-radius:6px;background:#ede9fe;cursor:pointer">${esc(k.ad)}</button>`).join('');
+        const secim = await new Promise(res => kutuK.querySelectorAll('button').forEach(b => b.onclick = () => res(r.kanalSec[+b.dataset.i])));
+        kutuK.style.color = '#b91c1c'; kutuK.textContent = '⏳ Bağlanılıyor…'; meşgul(bagla, true);
+        r = await window.masaustu.bulut({ op: 'kur', kurumKodu: kod, baglanti: token, sifre: s1, cihaz, chatId: secim.id });
+      }
+      meşgul(bagla, false);
+      if (!r || !r.ok) return mesaj((r && r.hata) || 'Bağlanamadı.');
+      BULUT.durum = await window.masaustu.bulut({ op: 'durum', kurumKodu: kod });
+      if (r.var) {
+        if (confirm(`Kanalda bu okulun verisi zaten var:\n${r.uzak.cihaz} — ${bulutTarih(r.uzak.tarih)}\n\nTAMAM = buluttakini bu bilgisayara yükle (buradaki hâl yedeklenir)\nİPTAL = bu bilgisayardakini gönder`)) {
+          const p = bulutPaketiAc(r.veri); localStorage.setItem(bulutSonAnahtar(kod), ''); m.remove(); return bulutOkulaYerlestir(p);
+        }
+      }
+      const ok = await bulutGonder();
+      alert(ok ? `✅ Bağlandı ve okulun verisi gönderildi.\n\nKanal: ${r.kanalAd || ''}\n\nŞimdi açılan pencerede BAĞLANTI ANAHTARINI kopyalayıp kendi Telegram'ınızda "Kayıtlı Mesajlar"a kaydedin. Diğer bilgisayarlarda kurum kodu + şifre + bu anahtarla bağlanacaksınız.\n\nŞifrenizi unutmayın: unutulursa buluttaki veri açılamaz.` : 'Bağlandı ama ilk gönderim yapılamadı:\n\n' + BULUT.hata);
+      m.remove(); bulutPenceresi(); bulutBaslat();
+    };
+    m.querySelector('#bc-cek').onclick = async () => {
+      const ckod = m.querySelector('#bc-kod').value.replace(/\D/g, ''), sifre = m.querySelector('#bc-sifre').value, bag = m.querySelector('#bc-baglanti').value.trim(), cihaz = m.querySelector('#bc-cihaz').value.trim();
+      if (ckod.length < 5) return mesaj('Kurum kodunu yazın.');
+      if (!sifre) return mesaj('Şifreyi yazın.');
+      if (!bag) return mesaj('Bağlantı anahtarını yapıştırın.');
+      const b = m.querySelector('#bc-cek'); meşgul(b, true); mesaj('⏳ Buluttan çekiliyor…');
+      const r = await window.masaustu.bulut({ op: 'cek', kurumKodu: ckod, baglanti: bag, sifre, cihaz });
+      meşgul(b, false);
+      if (!r || !r.ok) return mesaj((r && r.hata) || 'Çekilemedi.');
+      let p; try { p = bulutPaketiAc(r.veri); } catch (e) { return mesaj(e.message); }
+      m.remove(); bulutOkulaYerlestir(p);
+    };
+  }
+  window.bulutPenceresi = bulutPenceresi; window.bulutYukle = bulutYukle;
+
   function okulSil() {
     const L = okulListesi(); const o = L.find(x => x.id === AKTIF_OKUL);
     if (!AKTIF_OKUL || !o) { alert('İlk okul silinemez; bilgilerini "Verileri Sıfırla" ile boşaltabilirsiniz.'); return; }
@@ -1911,7 +2121,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       if (bek) { el.value = bek; try { saveDataToStorage(); } catch (e) {} }
     }
   }
-  window.addEventListener('load', () => setTimeout(okulSeciciCiz, 0));
+  window.addEventListener('load', () => setTimeout(() => { okulSeciciCiz(); try { bulutIsaret(); } catch (e) {} }, 0));
   // okul adı değişince seçicideki ad da güncellensin
   document.addEventListener('change', e => { if (e.target && e.target.id === 'okul-adi') setTimeout(okulSeciciCiz, 50); });
 
@@ -2301,6 +2511,7 @@ if (window.masaustu && window.masaustu.istem) window.prompt = (m, v) => window.m
       ozelEgitimRouteNo, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     localStorage.setItem(VERI_ANAHTARI, JSON.stringify(appData));
+    try { bulutDegisti(); } catch (e) {}
   }
 
   // Eskiden kaydedilmiş verilerde okul no / şube / cinsiyet / T.C. alanları yoktu.
