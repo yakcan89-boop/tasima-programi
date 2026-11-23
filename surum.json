@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "22.11.2026",
+      "surum": "23.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Yeni 📁 BELGELER bölümü: Yedek Araç Tutanağı — boşluklar ekranda doldurulabilir, güzergahtan ve şoför havuzundan doldurma, Yazdır / Boş yazdır / Excel / Word."
+      "notlar": "Belgeler: Yedek Araç Tutanağı'nın bütün metni ekranda değiştirilebilir (↺ Metni sıfırla), tarih için takvim, tarih değişince nöbetçi öğretmen kendiliğinden değişir."
     }
   },
   "kabuk": {
