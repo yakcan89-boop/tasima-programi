@@ -220,8 +220,14 @@
   .belge-kagit input.belge-bos:focus { outline:2px solid #93c5fd; background:#fff; }
   .belge-kagit .belge-imzalar { display:flex; justify-content:space-between; margin-top:70px; text-align:center; }
   .belge-kagit .belge-imzalar div { width:30%; }
+  .belge-kagit .belge-yazi { border-radius:3px; }
+  .belge-kagit .belge-yazi:hover { background:#f1f5f9; outline:1px dashed #94a3b8; }
+  .belge-kagit .belge-yazi:focus { background:#eff6ff; outline:2px solid #93c5fd; }
+  .belge-kagit .belge-takvim { cursor:pointer; font-size:15px; margin-left:-2px; user-select:none; }
   .belge-kagit .belge-imza-ad { display:block; margin:0 auto 4px; width:90%; text-align:center; }
   @media print {
+    .belge-kagit .belge-yazi { background:transparent !important; outline:none !important; }
+    .belge-kagit .belge-takvim { display:none !important; }
     .belge-kagit { border:none; box-shadow:none; padding:20mm 15mm 0; max-width:none; }
     .belge-kagit input.belge-bos { background:transparent !important; }
     body { background: #fff; padding: 0; }
@@ -316,7 +322,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 22.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 23.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -1196,7 +1202,8 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         <button class="btn-nav btn-maroon" style="width:auto; padding:6px 12px;" onclick="belgeTemizle()">🧹 Temizle</button>
       </div>
       <div class="no-print" id="belge-uyari" style="display:none; background:#fef3c7; border:1px solid #d97706; color:#7c2d12; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:13px;"></div>
-      <div class="no-print" style="font-size:12px; color:#475569; margin-bottom:8px;">Noktalı yerlere tıklayıp yazabilirsiniz. Boş bırakılan yerler kâğıtta noktalı çizgi olarak çıkar. Tutanak programa kaydedilmez.</div>
+      <div class="no-print" style="font-size:12px; color:#475569; margin-bottom:8px;">Sarı kutulara ve metnin her kelimesine tıklayıp yazabilirsiniz (ör. "arızalandığı için" yerine başka sebep, "götürmüştür" yerine "okula getirmiştir"). Boş bırakılan sarı kutular kâğıtta noktalı çizgi olarak çıkar. Tutanak programa kaydedilmez.
+        <button class="btn-nav btn-blue" style="width:auto; padding:3px 10px; font-size:11px; margin-left:6px;" onclick="belgeMetniSifirla()">↺ Metni sıfırla</button></div>
       <div id="belge-kagit" class="belge-kagit"></div>
     </div>
 
@@ -11573,7 +11580,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   const BELGE_ALANLAR = { okul: 300, guzNo: 70, plaka: 120, sofor: 230, tarih: 120, yedekPlaka: 120, yedekSofor: 230, imzaOgretmen: 190, imzaSofor: 190, imzaMdrYrd: 190 };
   function belgeAlan(ad, deger) {
     const v = String(deger == null ? '' : deger).replace(/"/g, '&quot;');
-    return `<input type="text" class="belge-bos" data-alan="${ad}" value="${v}" style="width:${BELGE_ALANLAR[ad] || 150}px" oninput="belgeGenislik(this); if(this.dataset.alan==='tarih') belgeTarihKontrol();">`;
+    return `<input type="text" class="belge-bos" data-alan="${ad}" value="${v}" style="width:${BELGE_ALANLAR[ad] || 150}px" oninput="belgeGenislik(this); if(this.dataset.alan==='tarih') belgeTarihDegisti();"${ad === 'imzaOgretmen' ? ' onchange="this.dataset.elle=\'1\'"' : ''}>`;
   }
   function belgeGenislik(el) { const min = BELGE_ALANLAR[el.dataset.alan] || 150; el.style.width = Math.max(min, (el.value.length + 2) * 9) + 'px'; }
   function belgeDeger(ad) { const el = document.querySelector(`#belge-kagit [data-alan="${ad}"]`); return el ? el.value.trim() : ''; }
@@ -11589,15 +11596,17 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const kagit = document.getElementById('belge-kagit'); if (!kagit) return;
     const okul = (document.getElementById('okul-adi') || {}).value || '';
     const mdrYrd = (document.getElementById('mdr-yard') || {}).value || '';
+    const y = t => `<span class="belge-yazi" contenteditable="true" spellcheck="false">${t}</span>`;
     kagit.innerHTML = `
-      <h1>TUTANAK</h1>
-      <div class="belge-konu">Konu: Araç Arızası Nedeniyle Yedek Araçla Taşıma</div>
-      <p>${belgeAlan('okul', belgeOkulYeri(okul))} taşıma yapmakta olan ${belgeAlan('guzNo')} güzergah numaralı, ${belgeAlan('plaka')} plakalı aracın şoförü ${belgeAlan('sofor')}, ${belgeAlan('tarih', bugunTR())} tarihinde aracı arızalandığı için gelmemiştir. Onun yerine taşıma firmasının gönderdiği ${belgeAlan('yedekPlaka')} plakalı aracın şoförü ${belgeAlan('yedekSofor')} taşımalı öğrencilerimizi götürmüştür. Bu durum nöbetçi öğretmen ve taşımayı yapan şoför tarafından tutanak altına alınmıştır.</p>
+      <h1>${y('TUTANAK')}</h1>
+      <div class="belge-konu">${y('Konu: Araç Arızası Nedeniyle Yedek Araçla Taşıma')}</div>
+      <p id="belge-metin">${belgeAlan('okul', belgeOkulYeri(okul))}${y(' taşıma yapmakta olan ')}${belgeAlan('guzNo')}${y(' güzergah numaralı, ')}${belgeAlan('plaka')}${y(' plakalı aracın şoförü ')}${belgeAlan('sofor')}${y(', ')}${belgeAlan('tarih', bugunTR())}<span class="belge-takvim no-print" title="Takvimden seç" onclick="belgeTakvimAc()">📅</span><input type="date" id="belge-tarih-secici" class="no-print" style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:none;" onchange="belgeTakvimSecildi(this.value)">${y(' tarihinde aracı arızalandığı için gelmemiştir. Onun yerine taşıma firmasının gönderdiği ')}${belgeAlan('yedekPlaka')}${y(' plakalı aracın şoförü ')}${belgeAlan('yedekSofor')}${y(' taşımalı öğrencilerimizi götürmüştür. Bu durum nöbetçi öğretmen ve taşımayı yapan şoför tarafından tutanak altına alınmıştır.')}</p>
       <div class="belge-imzalar">
-        <div>${belgeAlan('imzaOgretmen')}<br>Nöbetçi Öğretmen</div>
-        <div>${belgeAlan('imzaSofor')}<br>Şoför</div>
-        <div>${belgeAlan('imzaMdrYrd', mdrYrd)}<br>Müdür Yardımcısı</div>
+        <div>${belgeAlan('imzaOgretmen')}<br>${y('Nöbetçi Öğretmen')}</div>
+        <div>${belgeAlan('imzaSofor')}<br>${y('Şoför')}</div>
+        <div>${belgeAlan('imzaMdrYrd', mdrYrd)}<br>${y('Müdür Yardımcısı')}</div>
       </div>`;
+    belgeNobetciDoldur();
     kagit.querySelectorAll('input.belge-bos').forEach(belgeGenislik);
     const sec = document.getElementById('belge-guzergah');
     if (sec) sec.innerHTML = '<option value="">— güzergah seçin —</option>' + (routes || []).map((r, i) => `<option value="${i}">${r.no ? r.no + ' – ' : ''}${(r.name || '').slice(0, 40)}${r.plate ? ' (' + r.plate + ')' : ''}</option>`).join('');
@@ -11612,8 +11621,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     belgeAyarla('guzNo', no);
     belgeAyarla('plaka', r.plate || '');
     belgeAyarla('sofor', r.driver ? formatNameCase(r.driver) : '');
-    // nöbetçi öğretmen: o günün taşıma nöbetçisi biliniyorsa
-    try { const t = belgeDeger('tarih').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); if (t && !belgeDeger('imzaOgretmen')) { const k = `${t[3]}-${t[2].padStart(2, '0')}-${t[1].padStart(2, '0')}`; const n = teacherDuty && (teacherDuty[k] || teacherDuty[`${t[3]}-${t[2].padStart(2, '0')}-${t[1]}`]); if (n && !/^Öğretmen Adı/i.test(n)) belgeAyarla('imzaOgretmen', formatNameCase(n)); } } catch (e) {}
+    belgeNobetciDoldur();
   }
   function belgeYedekDoldur(ad) {
     ad = String(ad || '').trim(); if (!ad) return;
@@ -11621,6 +11629,39 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     belgeAyarla('yedekSofor', formatNameCase(s ? s.name : ad));
     if (s && s.plate) belgeAyarla('yedekPlaka', s.plate);
     if (!belgeDeger('imzaSofor')) belgeAyarla('imzaSofor', formatNameCase(s ? s.name : ad));
+  }
+  function belgeTarihAnahtar() { const m = belgeDeger('tarih').match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; }
+  // o günün taşıma nöbetçisi: ay içi değişiklik > aylık dağıtım > haftalık sabit nöbetçi
+  function belgeGununNobetcisi(k) {
+    if (!k) return '';
+    const gecerli = n => { n = String(n || '').trim(); return n && !/^Öğretmen Adı/i.test(n) ? n : ''; };
+    try { if (typeof puantajDutyOverrides !== 'undefined' && puantajDutyOverrides[k] !== undefined) return gecerli(puantajDutyOverrides[k]); } catch (e) {}
+    try { const n = gecerli(teacherDuty && teacherDuty[k]); if (n) return n; } catch (e) {}
+    try { const [Y, M, D] = k.split('-').map(Number); const g = new Date(Y, M - 1, D).getDay(); const id = ['', 'duty-mon', 'duty-tue', 'duty-wed', 'duty-thu', 'duty-fri', ''][g]; const el = id && document.getElementById(id); return gecerli(el && el.value); } catch (e) {}
+    return '';
+  }
+  function belgeNobetciDoldur() {
+    const el = document.querySelector('#belge-kagit [data-alan="imzaOgretmen"]'); if (!el) return;
+    const n = belgeGununNobetcisi(belgeTarihAnahtar());
+    el.value = n ? formatNameCase(n) : ''; delete el.dataset.elle; belgeGenislik(el);
+  }
+  function belgeTarihDegisti() { belgeTarihKontrol(); belgeNobetciDoldur(); }
+  function belgeTakvimAc() {
+    const sec = document.getElementById('belge-tarih-secici'); if (!sec) return;
+    const k = belgeTarihAnahtar(); if (k) sec.value = k;
+    try { sec.showPicker(); } catch (e) { sec.style.pointerEvents = 'auto'; sec.focus(); sec.click(); }
+  }
+  function belgeTakvimSecildi(v) {
+    const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!m) return;
+    belgeAyarla('tarih', `${m[3]}.${m[2]}.${m[1]}`); belgeTarihDegisti();
+  }
+  function belgeMetniSifirla() {
+    if (!confirm('Metindeki değiştirdiğiniz kelimeler hazır metne dönsün mü? (Sarı kutulardaki bilgiler korunur.)')) return;
+    const degerler = {}; document.querySelectorAll('#belge-kagit input.belge-bos').forEach(el => degerler[el.dataset.alan] = el.value);
+    const sec = document.getElementById('belge-guzergah'), sv = sec ? sec.value : '';
+    belgeHazirla();
+    Object.entries(degerler).forEach(([a, v]) => belgeAyarla(a, v));
+    if (sec) sec.value = sv; belgeTarihKontrol();
   }
   function belgeTarihKontrol() {
     const u = document.getElementById('belge-uyari'); if (!u) return;
@@ -11630,8 +11671,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       const d = new Date(+m[3], +m[2] - 1, +m[1]);
       if (d.getDay() === 0 || d.getDay() === 6) mesaj = '⚠️ Yazdığınız tarih hafta sonuna denk geliyor (' + ['Pazar', '', '', '', '', '', 'Cumartesi'][d.getDay()] + '). Tarihi kontrol edin.';
       else {
-        try { const ay = parseInt(document.getElementById('sel-month').value), yil = parseInt(document.getElementById('sel-year').value);
-          if (d.getMonth() === ay && d.getFullYear() === yil && monthWorkDays.length && !monthWorkDays.some(x => +x.day === d.getDate())) mesaj = '⚠️ Yazdığınız tarih programdaki tatil günlerinden biri. Tarihi kontrol edin.'; } catch (e) {}
+        try { const k = belgeTarihAnahtar(); if (k && typeof holidays !== 'undefined' && holidays[k]) mesaj = '⚠️ Yazdığınız tarih tatil günü' + (typeof holidays[k] === 'string' ? ' (' + holidays[k] + ')' : '') + '. Tarihi kontrol edin.'; } catch (e) {}
       }
     }
     u.textContent = mesaj; u.style.display = mesaj ? 'block' : 'none';
@@ -11646,14 +11686,19 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     try { window.print(); }
     finally { if (bos) inputs.forEach((el, i) => { el.value = eski[i]; el.setAttribute('value', eski[i]); belgeGenislik(el); }); }
   }
+  // ekrandaki tutanağı (değiştirilmiş kelimeler dahil) düz metne çevirir
   function belgeMetinParcalari() {
-    const v = a => belgeDeger(a) || '………………';
-    const okul = belgeDeger('okul') || '………………………… Okulunda';
-    return {
-      baslik: 'TUTANAK', konu: 'Konu: Araç Arızası Nedeniyle Yedek Araçla Taşıma',
-      metin: `${okul} taşıma yapmakta olan ${v('guzNo')} güzergah numaralı, ${v('plaka')} plakalı aracın şoförü ${v('sofor')}, ${v('tarih')} tarihinde aracı arızalandığı için gelmemiştir. Onun yerine taşıma firmasının gönderdiği ${v('yedekPlaka')} plakalı aracın şoförü ${v('yedekSofor')} taşımalı öğrencilerimizi götürmüştür. Bu durum nöbetçi öğretmen ve taşımayı yapan şoför tarafından tutanak altına alınmıştır.`,
-      imzalar: [[belgeDeger('imzaOgretmen'), 'Nöbetçi Öğretmen'], [belgeDeger('imzaSofor'), 'Şoför'], [belgeDeger('imzaMdrYrd'), 'Müdür Yardımcısı']]
-    };
+    const kagit = document.getElementById('belge-kagit');
+    const oku = kok => { let t = ''; if (!kok) return t; kok.childNodes.forEach(n => {
+      if (n.nodeType === 3) t += n.textContent;
+      else if (n.matches && n.matches('input.belge-bos')) t += n.value.trim() || '………………';
+      else if (n.matches && (n.matches('.no-print') || n.matches('input'))) {}
+      else if (n.tagName === 'BR') t += '\n';
+      else t += oku(n);
+    }); return t; };
+    const temiz = t => t.replace(/[ \t]+/g, ' ').trim();
+    const imzalar = [...kagit.querySelectorAll('.belge-imzalar > div')].map(d => { const p = oku(d).split('\n'); return [temiz(p[0] || '').replace(/^………………$/, ''), temiz(p.slice(1).join(' '))]; });
+    return { baslik: temiz(oku(kagit.querySelector('h1'))), konu: temiz(oku(kagit.querySelector('.belge-konu'))), metin: temiz(oku(document.getElementById('belge-metin'))), imzalar };
   }
   function belgeDosyaAdi(uzanti) { const t = (belgeDeger('tarih') || bugunTR()).replace(/[^\d]/g, '-'); return `Yedek_Arac_Tutanagi_${t}.${uzanti}`; }
   function belgeExcel() {
