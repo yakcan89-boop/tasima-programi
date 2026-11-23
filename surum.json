@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "23.11.2026",
+      "surum": "24.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Belgeler: Yedek Araç Tutanağı'nın bütün metni ekranda değiştirilebilir (↺ Metni sıfırla), tarih için takvim, tarih değişince nöbetçi öğretmen kendiliğinden değişir."
+      "notlar": "Yedek Araç Tutanağı resmî biçimde yeniden düzenlendi: okul müdürlüğü başlığı, düzgün tutanak dili, Adı Soyadı / İmza tablosu. Metnin tamamı ekranda değiştirilebilir, tarih için takvim."
     }
   },
   "kabuk": {
