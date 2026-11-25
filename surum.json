@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "24.11.2026",
+      "surum": "25.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Yedek Araç Tutanağı resmî biçimde yeniden düzenlendi: okul müdürlüğü başlığı, düzgün tutanak dili, Adı Soyadı / İmza tablosu. Metnin tamamı ekranda değiştirilebilir, tarih için takvim."
+      "notlar": "Servis Bilgileri'nde her araca '🧩 Özel eğitim' tiki: birden fazla özel eğitim servisi işaretlenebilir; tikli araçlar Özel Eğitim İmza Sürgüsü'nde (ayrı ayrı) çıkar, normal aylık puantajda çıkmaz."
     }
   },
   "kabuk": {
