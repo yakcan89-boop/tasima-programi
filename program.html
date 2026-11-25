@@ -332,7 +332,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 24.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 25.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -941,7 +941,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <!-- 198 NOLU ÖZEL EĞİTİM İMZA SÜRGÜSÜ -->
     <div id="page-ozel-egitim" class="page">
       <div class="no-print" style="margin-bottom:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:#efecf9; padding:8px; border:1px solid #4b3f8c; border-radius:6px;">
-        <label style="font-size:11.5px; font-weight:bold; color:#4b3f8c; white-space:nowrap;">🧩 ÖZEL EĞİTİM GÜZERGAHI:</label>
+        <label style="font-size:11.5px; font-weight:bold; color:#4b3f8c; white-space:nowrap;" title="Özel eğitim servisleri Servis Bilgileri sayfasında 'Özel eğitim' tiki ile işaretlenir">🧩 GÖSTERİLEN ÖZEL EĞİTİM SERVİSİ:</label>
         <select id="ozel-egitim-route-sec" onchange="setOzelEgitimRoute(this.value)" style="width:250px; font-weight:bold;"></select>
         <span style="font-size:11px; font-weight:bold; color:#4b3f8c;">Seçilen güzergahın ayrı imza sürgüsü (genel puantajdan otomatik çıkarılır). Şoför ve Rehber Personel adları "SERVİS BİLGİLERİ" sayfasından otomatik gelir. Alttaki nöbetçi öğretmen isminin üzerine tıklayarak değiştirebilirsiniz.</span>
         <button onclick="puantajBasliklariSifirla('ozel')" class="btn-nav btn-orange" style="padding:6px 15px;" title="Genel müdürlük / okul adı / ay yazılarını ana sayfadaki bilgilere geri döndürür">↺ Başlıkları Sıfırla</button>
@@ -2526,7 +2526,23 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   let routes = [];
   let students = {};
   let ozelEgitimRouteNo = '';
-  function isOzelEgitimRoute(r) { return !!r && ozelEgitimRouteNo !== '' && ozelEgitimRouteNo != null && String(r.no) === String(ozelEgitimRouteNo); }
+  // Özel eğitim servisleri: Servis Bilgileri'nde tik konan araçlar (birden fazla olabilir).
+  // ozelEgitimRouteNo = Özel Eğitim İmza Sürgüsü'nde o an gösterilen servis.
+  let ozelEgitimRouteNos = [];
+  function ozelEgitimListesiHazirla() {
+    if (!Array.isArray(ozelEgitimRouteNos)) ozelEgitimRouteNos = [];
+    ozelEgitimRouteNos = [...new Set(ozelEgitimRouteNos.map(String).filter(x => x !== ''))];
+    if (!ozelEgitimRouteNos.length && ozelEgitimRouteNo !== '' && ozelEgitimRouteNo != null) ozelEgitimRouteNos = [String(ozelEgitimRouteNo)];
+  }
+  function isOzelEgitimRoute(r) { return !!r && Array.isArray(ozelEgitimRouteNos) && ozelEgitimRouteNos.includes(String(r.no)); }
+  function ozelEgitimTik(i, acik) {
+    const r = routes[i]; if (!r) return;
+    ozelEgitimListesiHazirla();
+    const no = String(r.no);
+    if (acik) { if (!ozelEgitimRouteNos.includes(no)) ozelEgitimRouteNos.push(no); if (!r.rehberPersonel) r.rehberPersonel = 'REHBER PERSONEL ADI SOYADI'; ozelEgitimRouteNo = no; }
+    else { ozelEgitimRouteNos = ozelEgitimRouteNos.filter(x => x !== no); if (String(ozelEgitimRouteNo) === no) ozelEgitimRouteNo = ozelEgitimRouteNos[0] || ''; }
+    saveDataToStorage(); populateOzelEgitimSelect(); renderPuantajSheet(); renderOzelEgitimSheet(); try { updateDashboardStats(); } catch (e) {}
+  }
   let defaultGraduatedStudents = (GOMULU_YEDEK.graduatedStudents || []).map(g => ({ ...g, tur: g.tur || "MEZUN" }));
   let graduatedStudents = JSON.parse(JSON.stringify(defaultGraduatedStudents));
   // Yerleşimi belirlenmemiş 1. sınıflar — aday
@@ -2656,7 +2672,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       okulNobetYerleri, okulNobetWeeklyTemplate, okulNobetMonthlyData, okulNobetServis, servisYazdir, puantajBaslik,
       nobetOkullari, nobetOgretmenleri, nobetBahceSirasi, nobetIdarecileri, nobetEsaslari,
       ilkokulSabitAktif, sabitGunPasif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
-      ozelEgitimRouteNo, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
+      ozelEgitimRouteNo, ozelEgitimRouteNos, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -2743,7 +2759,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       okulNobetYerleri, okulNobetWeeklyTemplate, okulNobetMonthlyData, okulNobetServis, servisYazdir, puantajBaslik,
       nobetOkullari, nobetOgretmenleri, nobetBahceSirasi, nobetIdarecileri, nobetEsaslari,
       ilkokulSabitAktif, sabitGunPasif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
-      ozelEgitimRouteNo, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
+      ozelEgitimRouteNo, ozelEgitimRouteNos, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     localStorage.setItem(VERI_ANAHTARI, JSON.stringify(appData));
     try { bulutDegisti(); } catch (e) {}
@@ -2969,6 +2985,8 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         const data = JSON.parse(saved);
         routes = data.routes || defaultRoutes;
         if (data.ozelEgitimRouteNo) ozelEgitimRouteNo = data.ozelEgitimRouteNo;
+        ozelEgitimRouteNos = Array.isArray(data.ozelEgitimRouteNos) ? data.ozelEgitimRouteNos : [];
+        ozelEgitimListesiHazirla();
         routes.forEach(r => { if (isOzelEgitimRoute(r) && !r.rehberPersonel) r.rehberPersonel = 'REHBER PERSONEL ADI SOYADI'; });
         routes.forEach(r => { if (!r.cap) r.cap = 16; });
         students = data.students || {};
@@ -3043,6 +3061,8 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     driverPool = JSON.parse(JSON.stringify(defaultDriverPool));
     showStudentTc = !!g.showStudentTc;
     ozelEgitimRouteNo = g.ozelEgitimRouteNo || '';
+    ozelEgitimRouteNos = Array.isArray(g.ozelEgitimRouteNos) ? g.ozelEgitimRouteNos : [];
+    ozelEgitimListesiHazirla();
     const yaz = (id, deger) => { const el = document.getElementById(id); if (el && deger) el.value = deger; };
     yaz('okul-adi', g.okulAdi); yaz('okul-mudur', g.okulMudur);
     yaz('mdr-yard', g.mdrYard); yaz('genel-mudurluk', g.genelMudurluk);
@@ -3229,7 +3249,10 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   /* Servis bilgilerinde güzergah numarası değiştirilince yeniden sırala. */
   function guzergahNoDegis(i, deger) {
     if (!routes[i]) return;
+    const eskiNo = String(routes[i].no);
     routes[i].no = String(deger || '').trim();
+    // özel eğitim tiki numarayla tutulur: numara değişince tik de taşınsın
+    try { ozelEgitimListesiHazirla(); if (ozelEgitimRouteNos.includes(eskiNo)) { ozelEgitimRouteNos = ozelEgitimRouteNos.map(x => x === eskiNo ? routes[i].no : x); if (String(ozelEgitimRouteNo) === eskiNo) ozelEgitimRouteNo = routes[i].no; } } catch (e) {}
     // Toplama yeri yazısındaki numara da güzergahla birlikte güncellensin
     if (routes[i].seatInfo && routes[i].seatInfo.toplamaYeri) {
       routes[i].seatInfo.toplamaYeri = toplamaYeriNoDuzelt(routes[i].seatInfo.toplamaYeri, routes[i].no);
@@ -7191,6 +7214,9 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
               <option value="Sabah-Öğlen" ${(r.vakit||'Sabah-Öğlen')==='Sabah-Öğlen'?'selected':''}>Sabah-Öğlen</option>
               <option value="Öğlen-Akşam" ${r.vakit==='Öğlen-Akşam'?'selected':''}>Öğlen-Akşam</option>
             </select>
+            <label style="display:flex; align-items:center; gap:4px; margin-top:4px; font-size:11px; font-weight:bold; color:#4b3f8c; cursor:pointer; white-space:nowrap;" title="Tikli araçlar Özel Eğitim İmza Sürgüsü'nde çıkar, normal aylık puantajda çıkmaz">
+              <input type="checkbox" style="width:auto; margin:0;" ${isOzelEgitimRoute(r) ? 'checked' : ''} onchange="ozelEgitimTik(${i}, this.checked)"> 🧩 Özel eğitim
+            </label>
           </td>
           <td>
             ${soforSecHucresi(r, i)}
@@ -7394,11 +7420,14 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   }
 
   function populateOzelEgitimSelect() {
+    ozelEgitimListesiHazirla();
+    // silinen ya da numarası değişen güzergahlar listeden düşer
+    ozelEgitimRouteNos = ozelEgitimRouteNos.filter(no => routes.some(r => String(r.no) === no));
     const sel = document.getElementById('ozel-egitim-route-sec');
+    const tikli = routes.filter(isOzelEgitimRoute);
+    if (!tikli.some(r => String(r.no) === String(ozelEgitimRouteNo))) ozelEgitimRouteNo = tikli[0] ? String(tikli[0].no) : '';
     if (!sel) return;
-    sel.innerHTML = '<option value="">— YOK / KULLANILMIYOR —</option>';
-    routes.forEach(r => { sel.innerHTML += `<option value="${r.no}">${guzergahEtiketi(r)}</option>`; });
-    if (!routes.some(r => String(r.no) === String(ozelEgitimRouteNo))) ozelEgitimRouteNo = '';
+    sel.innerHTML = tikli.length ? tikli.map(r => `<option value="${r.no}">${guzergahEtiketi(r)}</option>`).join('') : '<option value="">— Servis Bilgileri\'nde "Özel eğitim" tiki yok —</option>';
     sel.value = ozelEgitimRouteNo;
   }
 
@@ -11050,7 +11079,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   }
 
   function getOzelEgitimRoute() {
-    return routes.find(isOzelEgitimRoute);
+    return routes.find(r => isOzelEgitimRoute(r) && String(r.no) === String(ozelEgitimRouteNo)) || routes.find(isOzelEgitimRoute);
   }
 
   function renderOzelEgitimSheet() {
