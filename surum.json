@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "27.11.2026",
+      "surum": "28.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Anasayfa: OKUL MÜDÜRÜ satırına 'Unvan' kutusu (vekâlette 'Müdür Vekili' yazılır). Aylık puantaj, günlük takip, öğrenci/servis listeleri ve Excel/Word çıktılarındaki müdür imzası bu unvanı kullanır. Diğer okullarda 'Okul Müdürü' olarak kalır."
+      "notlar": "Öğrenci koltuk planı çıktısında imzalar düzeltildi: isim üstte, unvan altta (Sürücü / Okul Müdürü-Müdür Vekili). Excel koltuk planında da aynı sıra."
     }
   },
   "kabuk": {
