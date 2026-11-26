@@ -2,9 +2,9 @@
   "aciklama": "Taşımalı Eğitim ve Nöbet Programı — güncelleme bilgisi. Program açılışta bu dosyaya bakar.",
   "programlar": {
     "tasima_genel_v1": {
-      "surum": "26.11.2026",
+      "surum": "27.11.2026",
       "html": "https://raw.githubusercontent.com/yakcan89-boop/tasima-programi/main/program.html",
-      "notlar": "Servis Denetim Formu: alttaki 'Denetleyen' imzaları tik ile seçilir — nöbetçi öğretmen (formun tarihindeki), müdür yardımcısı, okul müdürü (unvan: Okul Müdürü / Müdür Vekili). Yazdırma, Excel ve Word aynı imzaları kullanır."
+      "notlar": "Anasayfa: OKUL MÜDÜRÜ satırına 'Unvan' kutusu (vekâlette 'Müdür Vekili' yazılır). Aylık puantaj, günlük takip, öğrenci/servis listeleri ve Excel/Word çıktılarındaki müdür imzası bu unvanı kullanır. Diğer okullarda 'Okul Müdürü' olarak kalır."
     }
   },
   "kabuk": {
