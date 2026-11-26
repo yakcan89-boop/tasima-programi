@@ -332,7 +332,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 27.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 28.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -12442,7 +12442,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${gridHtml}</table>
         <table class="meta-header-table">
-          <tr><td style="width:50%; text-align:center; font-weight:bold;">SÜRÜCÜ<br><br><br>${route.driver||''}</td><td style="width:50%; text-align:center; font-weight:bold;">${mudurUnvani().toLocaleUpperCase('tr-TR')}<br><br><br>${okulMdr}</td></tr>
+          <tr><td style="width:50%; text-align:center; font-weight:bold;"><br><br><br>${route.driver||''}<br>Sürücü</td><td style="width:50%; text-align:center; font-weight:bold;"><br><br><br>${okulMdr}<br>${mudurUnvani()}</td></tr>
         </table>
       </div>`;
   }
@@ -12465,7 +12465,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     if (!route) return;
     const okulMdr = formatNameCase(document.getElementById('okul-mudur').value);
     const rows = getSeatingExportRows(route);
-    rows.push([], [], ['SÜRÜCÜ', '', mudurUnvani().toLocaleUpperCase('tr-TR')], [route.driver || '', '', okulMdr]);
+    rows.push([], [], [route.driver || '', '', okulMdr], ['Sürücü', '', mudurUnvani()]);
     exportArrayToExcel(`Oturum_Plani_${route.no}.xlsx`, `${route.no} Nolu`, rows, [10, 30, 10]);
   }
 
@@ -12489,7 +12489,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const sheets = routes.map(route => {
       ensureSeatingData(route);
       const rows = getSeatingExportRows(route);
-      rows.push([], [], ['SÜRÜCÜ', '', mudurUnvani().toLocaleUpperCase('tr-TR')], [route.driver || '', '', okulMdr]);
+      rows.push([], [], [route.driver || '', '', okulMdr], ['Sürücü', '', mudurUnvani()]);
       return { name: `${route.no} Nolu`, data: rows, colWidths: [10, 30, 10] };
     });
     saveDataToStorage();
