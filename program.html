@@ -332,7 +332,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 26.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 27.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -425,7 +425,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
               <tr><td style="background:#fff; width:35%; padding:4px; border:1px solid #444;">GENEL MÜDÜRLÜK</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="genel-mudurluk" value="TEMEL EĞİTİM GENEL MÜDÜRLÜĞÜ" oninput="saveDataToStorage()"></td></tr>
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;" title="MEB kurum kodu — MEBBİS'ten veri çekilince kendiliğinden yazılır">KURUM KODU</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="kurum-kodu" value="" inputmode="numeric" placeholder="MEBBİS'ten veri çekince kendiliğinden yazılır" title="MEB kurum kodu. MEBBİS'ten öğrenci/güzergah çekilince sayfanın üstündeki '( 731480 )' kodundan kendiliğinden yazılır; elle de yazılabilir. Aynı kurum kodu iki okulda olamaz." onchange="kurumKoduElle(this.value)"></td></tr>
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;">MERKEZ OKUL ADI</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="okul-adi" value="" placeholder="OKUL ADINI YAZIN" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
-              <tr><td style="background:#fff; padding:4px; border:1px solid #444;">OKUL MÜDÜRÜ</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="okul-mudur" value="" placeholder="Ad SOYAD" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
+              <tr><td style="background:#fff; padding:4px; border:1px solid #444;">OKUL MÜDÜRÜ</td><td style="padding:4px; border:1px solid #444;"><div style="display:flex; gap:6px; align-items:center;"><input type="text" id="okul-mudur" value="" placeholder="Ad SOYAD" oninput="updateDashboardStats(); saveDataToStorage()" style="flex:3;"><span style="font-size:11px; white-space:nowrap;" title="Vekâlet döneminde 'Müdür Vekili' yazın; bütün çıktılardaki müdür imzasının altında bu yazar">Unvan:</span><input type="text" id="okul-mudur-unvan" value="Okul Müdürü" placeholder="Okul Müdürü" oninput="updateDashboardStats(); saveDataToStorage()" style="flex:2; min-width:110px;"></div></td></tr>
               <tr><td style="background:#fff; padding:4px; border:1px solid #444;">MDR. YRD.</td><td style="padding:4px; border:1px solid #444;"><input type="text" id="mdr-yard" value="" placeholder="Ad SOYAD" oninput="updateDashboardStats(); saveDataToStorage()"></td></tr>
             </table>
           </div>
@@ -648,7 +648,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
 
       <div class="sheet-footer-compact" style="margin-top:20px;">
         <div><span class="out-mdr-yard"></span><br>Müdür Yardımcısı<br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
-        <div><span class="out-okul-mudur"></span><br>Okul Müdürü<br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
+        <div><span class="out-okul-mudur"></span><br><span class="out-okul-mudur-unvan">Okul Müdürü</span><br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
       </div>
     </div>
 
@@ -895,7 +895,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         <div id="daily-sheet-table-wrapper"></div>
         <div class="sheet-footer-compact">
           <div><b>İNCELEYEN</b><br><span class="out-mdr-yard"></span><br>Müdür Yardımcısı<br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
-          <div><b>ONAYLAYAN</b><br><span class="out-okul-mudur"></span><br>Okul Müdürü<br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
+          <div><b>ONAYLAYAN</b><br><span class="out-okul-mudur"></span><br><span class="out-okul-mudur-unvan">Okul Müdürü</span><br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
         </div>
       </div>
     </div>
@@ -933,7 +933,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:25px;">
           <div><span class="out-mdr-yard"></span><br>Müdür Yardımcısı<br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
-          <div><span class="out-okul-mudur"></span><br>Okul Müdürü<br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
+          <div><span class="out-okul-mudur"></span><br><span class="out-okul-mudur-unvan">Okul Müdürü</span><br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
         </div>
       </div>
     </div>
@@ -963,7 +963,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:25px;">
           <div><span class="out-mdr-yard"></span><br>Müdür Yardımcısı<br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
-          <div><span class="out-okul-mudur"></span><br>Okul Müdürü<br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
+          <div><span class="out-okul-mudur"></span><br><span class="out-okul-mudur-unvan">Okul Müdürü</span><br><input type="text" class="editable-date-input global-date-sync" oninput="syncDateInput(this.value)" value="30.09.2026" style="font-size:10px;"></div>
         </div>
       </div>
     </div>
@@ -1751,7 +1751,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:45px;">
           <div><span class="out-mdr-yard"></span><br>Müdür Yardımcısı<br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
-          <div><span class="out-okul-mudur"></span><br>Okul Müdürü<br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
+          <div><span class="out-okul-mudur"></span><br><span class="out-okul-mudur-unvan">Okul Müdürü</span><br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
         </div>
       </div>
     </div>
@@ -1779,7 +1779,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </div>
         <div class="sheet-footer-compact" style="margin-top:35px;">
           <div><span class="out-mdr-yard"></span><br>Müdür Yardımcısı<br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
-          <div><span class="out-okul-mudur"></span><br>Okul Müdürü<br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
+          <div><span class="out-okul-mudur"></span><br><span class="out-okul-mudur-unvan">Okul Müdürü</span><br><span class="out-imza-tarihi" style="font-size:10px; font-weight:bold;"></span></div>
         </div>
       </div>
     </div>
@@ -2671,6 +2671,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       okulAdi: document.getElementById('okul-adi').value,
       kurumKodu: (document.getElementById('kurum-kodu') || {}).value || '',
       okulMudur: document.getElementById('okul-mudur').value,
+      okulMudurUnvan: (document.getElementById('okul-mudur-unvan') || {}).value || 'Okul Müdürü',
       mdrYard: document.getElementById('mdr-yard').value,
       genelMudurluk: document.getElementById('genel-mudurluk').value,
       dutyMon: document.getElementById('duty-mon').value,
@@ -2757,6 +2758,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       okulAdi: document.getElementById('okul-adi').value,
       kurumKodu: (document.getElementById('kurum-kodu') || {}).value || '',
       okulMudur: document.getElementById('okul-mudur').value,
+      okulMudurUnvan: (document.getElementById('okul-mudur-unvan') || {}).value || 'Okul Müdürü',
       mdrYard: document.getElementById('mdr-yard').value,
       genelMudurluk: document.getElementById('genel-mudurluk').value,
       dutyMon: document.getElementById('duty-mon') ? document.getElementById('duty-mon').value : '',
@@ -3008,6 +3010,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         if (data.okulAdi) document.getElementById('okul-adi').value = data.okulAdi;
         { const kk = document.getElementById('kurum-kodu'); if (kk) kk.value = data.kurumKodu || ''; }
         if (data.okulMudur) document.getElementById('okul-mudur').value = data.okulMudur;
+        { const u = document.getElementById('okul-mudur-unvan'); if (u) u.value = data.okulMudurUnvan || 'Okul Müdürü'; }
         if (data.mdrYard) document.getElementById('mdr-yard').value = data.mdrYard;
         if (data.genelMudurluk) document.getElementById('genel-mudurluk').value = data.genelMudurluk;
         if (data.dutyMon) document.getElementById('duty-mon').value = data.dutyMon;
@@ -3077,6 +3080,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     ozelEgitimListesiHazirla();
     const yaz = (id, deger) => { const el = document.getElementById(id); if (el && deger) el.value = deger; };
     yaz('okul-adi', g.okulAdi); yaz('okul-mudur', g.okulMudur);
+    { const u = document.getElementById('okul-mudur-unvan'); if (u) u.value = g.okulMudurUnvan || 'Okul Müdürü'; }
     yaz('mdr-yard', g.mdrYard); yaz('genel-mudurluk', g.genelMudurluk);
     yaz('duty-mon', g.dutyMon); yaz('duty-tue', g.dutyTue); yaz('duty-wed', g.dutyWed);
     yaz('duty-thu', g.dutyThu); yaz('duty-fri', g.dutyFri);
@@ -3144,13 +3148,15 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     XLSX.writeFile(wb, filename);
   }
 
+  // Anasayfadaki müdür unvanı (vekâlette "Müdür Vekili"); boşsa "Okul Müdürü"
+  function mudurUnvani() { const el = document.getElementById('okul-mudur-unvan'); const v = el ? el.value.replace(/\s+/g, ' ').trim() : ''; return v || 'Okul Müdürü'; }
   function getSignatureFooterExcelRows() {
     const mdrYard = formatNameCase(document.getElementById('mdr-yard').value);
     const okulMdr = formatNameCase(document.getElementById('okul-mudur').value);
     return [
       [],
       [],
-      ['', 'MÜDÜR YARDIMCISI', '', 'MÜDÜR VEKİLİ'],
+      ['', 'MÜDÜR YARDIMCISI', '', mudurUnvani().toLocaleUpperCase('tr-TR')],
       ['', mdrYard, '', okulMdr]
     ];
   }
@@ -3185,7 +3191,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     return `<table style="width:100%; border:none; margin-top:40px;">
       <tr>
         <td style="border:none; text-align:center; width:50%;">${mdrYard}<br>Müdür Yardımcısı${wTarih}</td>
-        <td style="border:none; text-align:center; width:50%;">${okulMdr}<br>Okul Müdürü${wTarih}</td>
+        <td style="border:none; text-align:center; width:50%;">${okulMdr}<br>${mudurUnvani()}${wTarih}</td>
       </tr>
     </table>`;
   }
@@ -3310,6 +3316,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const mdr = formatNameCase(document.getElementById('okul-mudur').value);
     const yard = formatNameCase(document.getElementById('mdr-yard').value);
     document.querySelectorAll('.out-okul-mudur').forEach(e => e.innerText = mdr);
+    document.querySelectorAll('.out-okul-mudur-unvan').forEach(e => e.innerText = mudurUnvani());
     document.querySelectorAll('.out-mdr-yard').forEach(e => e.innerText = yard);
 
     const monthSel = document.getElementById('sel-month');
@@ -4264,6 +4271,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const mudur = idareci.find(x => x.gorev !== 'Müdür Yardımcısı'), yard = idareci.find(x => x.gorev === 'Müdür Yardımcısı');
     const kutu = (id, yeni, etiket) => { const el = document.getElementById(id); if (!el || !yeni || N(el.value) === N(yeni)) return; islem.push({ metin: `Ana sayfa ${etiket}: ${el.value.trim() ? '<s>' + esc(el.value) + '</s> → ' : ''}<b>${esc(yeni)}</b>`, uygula: () => { el.value = yeni; } }); };
     if (mudur) kutu('okul-mudur', mudur.ad, 'Okul Müdürü');
+    if (mudur) kutu('okul-mudur-unvan', mudur.gorev, 'Müdür unvanı');
     if (yard) kutu('mdr-yard', yard.ad, 'Mdr. Yrd.');
     idareci.forEach(x => {
       const var_ = nobetIdarecileri.find(k => N(k.name) === N(x.ad));
@@ -5643,7 +5651,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         ${bilgiFormuTabloHtml()}
         <div class="sheet-footer-compact" style="margin-top:35px;">
           <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-          <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+          <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
         </div>
       </div>`;
     document.body.classList.add('printing-student-search');
@@ -6905,7 +6913,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:45px;">
           <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-          <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+          <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
         </div>
       </div>`;
     document.body.classList.add('printing-driver-pool');
@@ -7059,7 +7067,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         <table style="width:100%; border-collapse:collapse;"><thead>${headHtml}</thead><tbody>${rowsHtml}</tbody></table>
         <div class="sheet-footer-compact" style="margin-top:35px;">
           <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-          <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+          <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
         </div>
       </div>`;
     document.body.classList.add('printing-servis-list');
@@ -10024,7 +10032,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     });
     if (!imzaKutulari) {
       imzaKutulari = `<div style="text-align:center; min-width:180px;"><b>${formatNameCase(document.getElementById('mdr-yard').value)}</b><br><span style="font-size:${P('imzaGorev')}px;">Müdür Yardımcısı</span></div>` +
-                     `<div style="text-align:center; min-width:180px;"><b>${formatNameCase(document.getElementById('okul-mudur').value)}</b><br><span style="font-size:${P('imzaGorev')}px;">Okul Müdürü</span></div>`;
+                     `<div style="text-align:center; min-width:180px;"><b>${formatNameCase(document.getElementById('okul-mudur').value)}</b><br><span style="font-size:${P('imzaGorev')}px;">${mudurUnvani()}</span></div>`;
     }
 
     return `
@@ -10577,7 +10585,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     if (!batchContainer) return;
     batchContainer.innerHTML = '';
     routes.forEach((route, rIndex) => {
-      batchContainer.innerHTML += `<div class="${rIndex < routes.length - 1 ? 'batch-page-break' : ''}"><div class="sheet-header-title">${okulAdi} - ${guzergahTamAdi(route)} SERVİS TUTANAĞI</div>${buildDailySheetHtml(route)}<div class="sheet-footer-compact"><div><b>İNCELEYEN</b><br><span>${mdrYard}</span><br>Müdür Yardımcısı<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div><div><b>ONAYLAYAN</b><br><span>${okulMdr}</span><br>Okul Müdürü<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div></div></div>`;
+      batchContainer.innerHTML += `<div class="${rIndex < routes.length - 1 ? 'batch-page-break' : ''}"><div class="sheet-header-title">${okulAdi} - ${guzergahTamAdi(route)} SERVİS TUTANAĞI</div>${buildDailySheetHtml(route)}<div class="sheet-footer-compact"><div><b>İNCELEYEN</b><br><span>${mdrYard}</span><br>Müdür Yardımcısı<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div><div><b>ONAYLAYAN</b><br><span>${okulMdr}</span><br>${mudurUnvani()}<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div></div></div>`;
     });
     document.body.classList.add('printing-batch-daily');
     window.print();
@@ -11357,7 +11365,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:30px;">
           <div>${mdrYard}<br>Müdür Yardımcısı<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div>
-          <div>${okulMdr}<br>Okul Müdürü<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div>
+          <div>${okulMdr}<br>${mudurUnvani()}<br><span style="font-size:10px; font-weight:bold;">${dateVal}</span></div>
         </div>
       </div>`;
 
@@ -11620,7 +11628,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
             </table>
             <div class="sheet-footer-compact" style="margin-top:22px;">
               <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-              <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+              <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
             </div>
           </div>
         </div>`;
@@ -12434,7 +12442,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${gridHtml}</table>
         <table class="meta-header-table">
-          <tr><td style="width:50%; text-align:center; font-weight:bold;">SÜRÜCÜ<br><br><br>${route.driver||''}</td><td style="width:50%; text-align:center; font-weight:bold;">OKUL MÜDÜRÜ<br><br><br>${okulMdr}</td></tr>
+          <tr><td style="width:50%; text-align:center; font-weight:bold;">SÜRÜCÜ<br><br><br>${route.driver||''}</td><td style="width:50%; text-align:center; font-weight:bold;">${mudurUnvani().toLocaleUpperCase('tr-TR')}<br><br><br>${okulMdr}</td></tr>
         </table>
       </div>`;
   }
@@ -12457,7 +12465,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     if (!route) return;
     const okulMdr = formatNameCase(document.getElementById('okul-mudur').value);
     const rows = getSeatingExportRows(route);
-    rows.push([], [], ['SÜRÜCÜ', '', 'OKUL MÜDÜRÜ'], [route.driver || '', '', okulMdr]);
+    rows.push([], [], ['SÜRÜCÜ', '', mudurUnvani().toLocaleUpperCase('tr-TR')], [route.driver || '', '', okulMdr]);
     exportArrayToExcel(`Oturum_Plani_${route.no}.xlsx`, `${route.no} Nolu`, rows, [10, 30, 10]);
   }
 
@@ -12472,7 +12480,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const html = `<h2>${okulAdi}</h2><h2>${guzergahTamAdi(route)} ARAÇ İÇİ OTURUM VE YERLEŞİM PLANI</h2>
       <p>Şoför: ${route.driver} | Plaka: ${route.plate}</p>
       <table><thead><tr><th>KOLTUK NO</th><th>ÖĞRENCİNİN ADI SOYADI</th><th>SINIFI</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-      <table style="width:100%; border:none; margin-top:40px;"><tr><td style="border:none; text-align:center; width:50%;">${route.driver || ''}<br>Sürücü</td><td style="border:none; text-align:center; width:50%;">${okulMdr}<br>Okul Müdürü</td></tr></table>`;
+      <table style="width:100%; border:none; margin-top:40px;"><tr><td style="border:none; text-align:center; width:50%;">${route.driver || ''}<br>Sürücü</td><td style="border:none; text-align:center; width:50%;">${okulMdr}<br>${mudurUnvani()}</td></tr></table>`;
     exportHtmlToWord(`Oturum_Plani_${route.no}.doc`, 'Araç İçi Oturum Planı', html);
   }
 
@@ -12481,7 +12489,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const sheets = routes.map(route => {
       ensureSeatingData(route);
       const rows = getSeatingExportRows(route);
-      rows.push([], [], ['SÜRÜCÜ', '', 'OKUL MÜDÜRÜ'], [route.driver || '', '', okulMdr]);
+      rows.push([], [], ['SÜRÜCÜ', '', mudurUnvani().toLocaleUpperCase('tr-TR')], [route.driver || '', '', okulMdr]);
       return { name: `${route.no} Nolu`, data: rows, colWidths: [10, 30, 10] };
     });
     saveDataToStorage();
@@ -12500,7 +12508,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       fullHtml += `<h2>${okulAdi}</h2><h2>${guzergahTamAdi(route)} ARAÇ İÇİ OTURUM VE YERLEŞİM PLANI</h2>
         <p>Şoför: ${route.driver} | Plaka: ${route.plate}</p>
         <table><thead><tr><th>KOLTUK NO</th><th>ÖĞRENCİNİN ADI SOYADI</th><th>SINIFI</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-        <table style="width:100%; border:none; margin-top:40px;"><tr><td style="border:none; text-align:center; width:50%;">${route.driver || ''}<br>Sürücü</td><td style="border:none; text-align:center; width:50%;">${okulMdr}<br>Okul Müdürü</td></tr></table>`;
+        <table style="width:100%; border:none; margin-top:40px;"><tr><td style="border:none; text-align:center; width:50%;">${route.driver || ''}<br>Sürücü</td><td style="border:none; text-align:center; width:50%;">${okulMdr}<br>${mudurUnvani()}</td></tr></table>`;
       if (idx < routes.length - 1) fullHtml += '<br clear="all" style="page-break-before:always">';
     });
     saveDataToStorage();
@@ -12603,7 +12611,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         ${imzasiz ? '' : `<div class="sheet-footer-compact" style="margin-top:45px;">
           <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-          <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+          <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
         </div>`}
       </div>`;
   }
@@ -13336,7 +13344,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:40px;">
           <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-          <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+          <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
         </div>
       </div>`;
     document.body.classList.add('printing-student-search');
@@ -13495,7 +13503,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </table>
         <div class="sheet-footer-compact" style="margin-top:45px;">
           <div>${mdrYard}<br>Müdür Yardımcısı${imzaTarihSatiri()}</div>
-          <div>${okulMdr}<br>Okul Müdürü${imzaTarihSatiri()}</div>
+          <div>${okulMdr}<br>${mudurUnvani()}${imzaTarihSatiri()}</div>
         </div>
       </div>`;
   }
@@ -14700,7 +14708,7 @@ window.TYP={ sekme, typDocx, kisiKaydet, kisiDuzenle, kisiSil, kisiVazgec, kisiT
       `<div class="sheet-header-title">${okulAdi} - ${guzergahTamAdi(route)} SERVİS TUTANAĞI</div>` +
       buildDailySheetHtml(route) +
       `<div class="sheet-footer-compact"><div><b>İNCELEYEN</b><br><span>${mdrYard}</span><br>Müdür Yardımcısı<br><span style="font-size:10px; font-weight:bold;">${tarih}</span></div>` +
-      `<div><b>ONAYLAYAN</b><br><span>${okulMdr}</span><br>Okul Müdürü<br><span style="font-size:10px; font-weight:bold;">${tarih}</span></div></div>` +
+      `<div><b>ONAYLAYAN</b><br><span>${okulMdr}</span><br>${mudurUnvani()}<br><span style="font-size:10px; font-weight:bold;">${tarih}</span></div></div>` +
       `</div></div>`;
   }
   // tablo satırlarını, sayfanın boş kalan yüksekliği eşit dağılacak şekilde büyüt
