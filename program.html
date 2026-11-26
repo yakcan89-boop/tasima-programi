@@ -332,7 +332,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     <div id="hakkinda-modal" class="no-print" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:10px; padding:22px 26px; max-width:420px; width:90%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.3); font-size:13.5px; line-height:1.6; color:#1f2937;">
         <div style="font-size:16px; font-weight:bold; color:#1b4958; margin-bottom:6px;">Taşımalı Eğitim ve Nöbet Yönetim Sistemi</div>
-        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 25.11.2026</div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Sürüm: 26.11.2026</div>
         <div>Tasarım ve geliştirme: <b>Yunus AKÇAKAYA</b></div>
         <div style="margin-top:8px;">Bu program okullar için ücretsiz hazırlanmıştır.</div>
         <button onclick="document.getElementById('hakkinda-modal').style.display='none'" style="margin-top:16px; background:#1b4958; color:#fff; border:none; border-radius:6px; padding:7px 22px; font-weight:bold; cursor:pointer;">Kapat</button>
@@ -1160,6 +1160,13 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
             <label><b>Denetleme Tarihi:</b></label>
             <input type="text" id="inspection-date-input" class="editable-date-input" value="01.09.2026" oninput="renderInspectionForm()">
           </div>
+        </div>
+        <div class="no-print" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:8px; background:#eef3f6; border:1px solid #1b4958; border-radius:6px; padding:7px 10px; font-size:12.5px;">
+          <b style="color:#1b4958;">✍️ İmzalar (Denetleyen):</b>
+          <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="dimza-nobetci" style="width:auto; margin:0;" onchange="denetimImzaAyar()"> Nöbetçi öğretmen <span style="color:#64748b; font-size:11px;">(formun tarihindeki)</span></label>
+          <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="dimza-mdryrd" style="width:auto; margin:0;" onchange="denetimImzaAyar()"> Müdür yardımcısı</label>
+          <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="dimza-mudur" style="width:auto; margin:0;" onchange="denetimImzaAyar()"> Okul müdürü</label>
+          <label style="display:flex; align-items:center; gap:4px;">Unvan: <select id="dimza-unvan" style="width:auto; padding:3px 6px;" onchange="denetimImzaAyar()"><option>Okul Müdürü</option><option>Müdür Vekili</option></select></label>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
           <button onclick="printSingleInspection()" class="btn-nav btn-blue" style="padding:7px 14px;">🖨️ Bu Formu Yazdır (A4)</button>
@@ -2529,6 +2536,9 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   // Özel eğitim servisleri: Servis Bilgileri'nde tik konan araçlar (birden fazla olabilir).
   // ozelEgitimRouteNo = Özel Eğitim İmza Sürgüsü'nde o an gösterilen servis.
   let ozelEgitimRouteNos = [];
+  // Servis denetim formunun altındaki "Denetleyen" imzaları (tik ile seçilir)
+  const DENETIM_IMZA_VARSAYILAN = { nobetci: false, mdrYrd: true, mudur: true, mudurUnvan: 'Okul Müdürü' };
+  let denetimImza = Object.assign({}, DENETIM_IMZA_VARSAYILAN);
   function ozelEgitimListesiHazirla() {
     if (!Array.isArray(ozelEgitimRouteNos)) ozelEgitimRouteNos = [];
     ozelEgitimRouteNos = [...new Set(ozelEgitimRouteNos.map(String).filter(x => x !== ''))];
@@ -2672,7 +2682,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       okulNobetYerleri, okulNobetWeeklyTemplate, okulNobetMonthlyData, okulNobetServis, servisYazdir, puantajBaslik,
       nobetOkullari, nobetOgretmenleri, nobetBahceSirasi, nobetIdarecileri, nobetEsaslari,
       ilkokulSabitAktif, sabitGunPasif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
-      ozelEgitimRouteNo, ozelEgitimRouteNos, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
+      ozelEgitimRouteNo, ozelEgitimRouteNos, denetimImza, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -2759,7 +2769,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       okulNobetYerleri, okulNobetWeeklyTemplate, okulNobetMonthlyData, okulNobetServis, servisYazdir, puantajBaslik,
       nobetOkullari, nobetOgretmenleri, nobetBahceSirasi, nobetIdarecileri, nobetEsaslari,
       ilkokulSabitAktif, sabitGunPasif, nobetSabitTayin, nobetIzinleri, nobetYazdirPunto,
-      ozelEgitimRouteNo, ozelEgitimRouteNos, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
+      ozelEgitimRouteNo, ozelEgitimRouteNos, denetimImza, denetimDuzelt, denetimTekForm, silinenKayitlar, typModulVeri, nobetPlanlari, nobetKilit, nobetDevirIslenen, bilgiFormuAlan, plakaDuzelt1, plakaDuzelt2, eylul2026Sabit, ekim2026Sabit, ekimPuantajNobetci, soforGocuEkim, soforAracGocu, firatNobet091026, nobetGunYerKurali
     };
     localStorage.setItem(VERI_ANAHTARI, JSON.stringify(appData));
     try { bulutDegisti(); } catch (e) {}
@@ -2986,6 +2996,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         routes = data.routes || defaultRoutes;
         if (data.ozelEgitimRouteNo) ozelEgitimRouteNo = data.ozelEgitimRouteNo;
         ozelEgitimRouteNos = Array.isArray(data.ozelEgitimRouteNos) ? data.ozelEgitimRouteNos : [];
+        if (data.denetimImza && typeof data.denetimImza === 'object') denetimImza = Object.assign({}, DENETIM_IMZA_VARSAYILAN, data.denetimImza);
         ozelEgitimListesiHazirla();
         routes.forEach(r => { if (isOzelEgitimRoute(r) && !r.rehberPersonel) r.rehberPersonel = 'REHBER PERSONEL ADI SOYADI'; });
         routes.forEach(r => { if (!r.cap) r.cap = 16; });
@@ -3062,6 +3073,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     showStudentTc = !!g.showStudentTc;
     ozelEgitimRouteNo = g.ozelEgitimRouteNo || '';
     ozelEgitimRouteNos = Array.isArray(g.ozelEgitimRouteNos) ? g.ozelEgitimRouteNos : [];
+    denetimImza = Object.assign({}, DENETIM_IMZA_VARSAYILAN, g.denetimImza || {});
     ozelEgitimListesiHazirla();
     const yaz = (id, deger) => { const el = document.getElementById(id); if (el && deger) el.value = deger; };
     yaz('okul-adi', g.okulAdi); yaz('okul-mudur', g.okulMudur);
@@ -3179,13 +3191,12 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
   }
 
   function getInspectionSignatureFooterWordHtml() {
-    const mdrYard = (typeof denetimDegeri === 'function') ? denetimDegeri(null, 'mdrYard') : formatNameCase(document.getElementById('mdr-yard').value);
-    const okulMdr = (typeof denetimDegeri === 'function') ? denetimDegeri(null, 'okulMdr') : formatNameCase(document.getElementById('okul-mudur').value);
+    const dateVal = (document.getElementById('inspection-date-input') || {}).value || '';
+    const liste = denetimImzaListesi(dateVal);
+    if (!liste.length) return '';
+    const gen = Math.floor(100 / liste.length);
     return `<table style="width:100%; border:none; margin-top:40px;">
-      <tr>
-        <td style="border:none; text-align:center; width:50%;">Denetleyen<br><br>${mdrYard}<br>Müdür Yardımcısı</td>
-        <td style="border:none; text-align:center; width:50%;">Denetleyen<br><br>${okulMdr}<br>Okul Müdürü</td>
-      </tr>
+      <tr>${liste.map(x => `<td style="border:none; text-align:center; width:${gen}%;">Denetleyen<br><br>${x.ad || '……………………'}<br>${x.unvan}</td>`).join('')}</tr>
     </table>`;
   }
 
@@ -7260,7 +7271,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     if (pageId === 'cizelge') renderDailySheet();
     if (pageId === 'puantaj') renderPuantajSheet();
     if (pageId === 'ozel-egitim') renderOzelEgitimSheet();
-    if (pageId === 'denetim') renderInspectionForm();
+    if (pageId === 'denetim') { denetimImzaKutulariniDoldur(); renderInspectionForm(); }
     if (pageId === 'typ' && window.TYP) { try { TYP.ac(); } catch (e) { console.warn('TYP sayfası açılamadı:', e); } }
     if (pageId === 'bilgi-formu') { bilgiFormuFiltreDoldur(); renderBilgiFormu(); veliTopluAciklamaYaz(); }
     if (pageId === 'ogrenci-ara') { populateStudentSearchFilters(); renderStudentSearch(); }
@@ -10381,6 +10392,36 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
       coklu.map(g => '<b>' + (g[0].driver || '') + '</b> (' + g.map(r => r.no).join('–') + ')').join(', ');
   }
 
+  function denetimImzaKutulariniDoldur() {
+    const d = denetimImza || DENETIM_IMZA_VARSAYILAN;
+    const k = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+    k('dimza-nobetci', d.nobetci); k('dimza-mdryrd', d.mdrYrd); k('dimza-mudur', d.mudur);
+    const u = document.getElementById('dimza-unvan'); if (u) u.value = d.mudurUnvan === 'Müdür Vekili' ? 'Müdür Vekili' : 'Okul Müdürü';
+  }
+  function denetimImzaAyar() {
+    const c = id => { const el = document.getElementById(id); return !!(el && el.checked); };
+    denetimImza = { nobetci: c('dimza-nobetci'), mdrYrd: c('dimza-mdryrd'), mudur: c('dimza-mudur'), mudurUnvan: (document.getElementById('dimza-unvan') || {}).value || 'Okul Müdürü' };
+    saveDataToStorage(); renderInspectionForm();
+  }
+  function denetimTarihNobetcisi(dateVal) {
+    const m = String(dateVal || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); if (!m) return '';
+    try { const n = belgeGununNobetcisi(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`); return n ? formatNameCase(n) : ''; } catch (e) { return ''; }
+  }
+  // seçili imzalar: [{ ad (düz metin), html (ekranda düzenlenebilir), unvan }]
+  function denetimImzaListesi(dateVal, G) {
+    const d = denetimImza || DENETIM_IMZA_VARSAYILAN, liste = [];
+    if (d.nobetci) { const n = denetimTarihNobetcisi(dateVal); liste.push({ ad: n, html: n || '……………………', unvan: 'Nöbetçi Öğretmen' }); }
+    if (d.mdrYrd) liste.push({ ad: denetimDegeri(null, 'mdrYard'), html: G ? G('mdrYard') : denetimDegeri(null, 'mdrYard'), unvan: 'Müdür Yardımcısı' });
+    if (d.mudur) liste.push({ ad: denetimDegeri(null, 'okulMdr'), html: G ? G('okulMdr') : denetimDegeri(null, 'okulMdr'), unvan: d.mudurUnvan || 'Okul Müdürü' });
+    return liste;
+  }
+  function denetimImzaExcelSatirlari(dateVal) {
+    const liste = denetimImzaListesi(dateVal); if (!liste.length) return [];
+    const yer = [[0], [0, 3], [0, 2, 3]][liste.length - 1];
+    const satir = f => { const r = ['', '', '', '']; liste.forEach((x, i) => r[yer[i]] = f(x)); return r; };
+    return [[], [], satir(() => 'DENETLEYEN'), satir(x => x.ad || ''), satir(x => (x.unvan || '').toLocaleUpperCase('tr-TR'))];
+  }
+
   function buildInspectionFormHtml(route, dateVal, duzenlenebilir) {
     route = denetimAnaRota(route);
     const D = (alan) => denetimHucre(route, alan, duzenlenebilir);
@@ -10416,8 +10457,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
         </div>
         <div style="text-align:right; font-size:9.5px; font-weight:bold; margin-top:4px; padding-right:40px;">${dateVal}</div>
         <div class="inspection-sign-block">
-          <div>Denetleyen<br><br><span style="font-size:10.5px;">${G('mdrYard')}</span><br>Müdür Yardımcısı</div>
-          <div>Denetleyen<br><br><span style="font-size:10.5px;">${G('okulMdr')}</span><br>Okul Müdürü</div>
+          ${denetimImzaListesi(dateVal, G).map(x => `<div>Denetleyen<br><br><span style="font-size:10.5px;">${x.html}</span><br>${x.unvan}</div>`).join('')}
         </div>
       </div>
     `;
@@ -10445,8 +10485,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     if (!route) return;
     const dateVal = document.getElementById('inspection-date-input').value || "01.09.2026";
     const rows = getInspectionRowsData(route, dateVal);
-    rows.push([], [], ['DENETLEYEN', '', '', 'DENETLEYEN'], ['MÜDÜR YARDIMCISI', '', '', 'MÜDÜR VEKİLİ']);
-    rows.push(...getSignatureFooterExcelRows().slice(2));
+    rows.push(...denetimImzaExcelSatirlari(dateVal));
     exportArrayToExcel(`Denetim_Formu_${route.no}.xlsx`, `${route.no} Nolu`, rows, [55, 10, 10, 30]);
   }
 
@@ -10468,8 +10507,7 @@ document.addEventListener('mousedown', e => { const t = e.target; if (t && /^(IN
     const dateVal = document.getElementById('inspection-date-input').value || "01.09.2026";
     const sheets = denetimFormRotalari().map(route => {
       const rows = getInspectionRowsData(route, dateVal);
-      rows.push([], [], ['DENETLEYEN', '', '', 'DENETLEYEN'], ['MÜDÜR YARDIMCISI', '', '', 'MÜDÜR VEKİLİ']);
-      rows.push(...getSignatureFooterExcelRows().slice(2));
+      rows.push(...denetimImzaExcelSatirlari(dateVal));
       return { name: `${route.no} Nolu`, data: rows, colWidths: [55, 10, 10, 30] };
     });
     exportMultiSheetExcel('Denetim_Formlari_Tum_Guzergahlar.xlsx', sheets);
